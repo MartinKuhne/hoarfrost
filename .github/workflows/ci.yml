@@ -1,0 +1,111 @@
+name: Hoarfrost CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - ".config/**"
+      - ".cargo/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - ".config/**"
+      - ".cargo/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/ci.yml"
+
+env:
+  CARGO_TERM_COLOR: always
+  # Override repo-level .cargo/config.toml `target-cpu=native` for portable CI VM execution
+  RUSTFLAGS: ""
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: cargo check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+      - run: cargo check --workspace --all-features
+
+  test:
+    name: cargo nextest
+    runs-on: ubuntu-latest
+    needs: check
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+      # Install cargo-nextest at the same version the project ships in
+      # `.config/nextest.toml`. Pinning the version ensures CI matches local runs.
+      - run: cargo install cargo-nextest --locked --version ^0.9
+      - name: Install Vulkan software renderer (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
+      # The suite measures real text layout through `iced_test`, so it needs the
+      # fonts the product expects on Linux. `candidate_fallback_font_paths`
+      # looks for `NotoSansSymbols-Regular.ttf`, and widgets request families
+      # (`Fira Sans`) that only resolve through the host collection.
+      - name: Install the fonts the layout tests measure against
+        run: sudo apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-color-emoji
+      # Use the `ci` profile (no retries, fail-fast, JUnit output) defined
+      # in `.config/nextest.toml`.
+      - run: cargo nextest run -p hoarfrost --all-features --profile ci
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextest-junit
+          path: target/nextest/ci/junit.xml
+
+  clippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+      - run: cargo clippy --workspace --all-features -- -D warnings
+
+  fmt:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --check
+
+  doc:
+    name: cargo doc
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+      - run: cargo doc --workspace --all-features --no-deps --quiet

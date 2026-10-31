@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+    "src/hoarfrost",
+    "src/hoarfrost-demo",
+]
+default-members = ["src/hoarfrost"]
