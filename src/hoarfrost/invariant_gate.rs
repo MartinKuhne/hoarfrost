@@ -44,6 +44,7 @@ use crate::microcopy::pins::{PinExemption, is_exempt};
 use crate::microcopy::truncate::{ELLIPSIS, LabelSlot, TruncationTooltipViolation};
 use crate::validation::punish::{Punishment, punish};
 use crate::validation::stance::EditStance;
+#[cfg(feature = "password")]
 use crate::widget::password_model::SECRET_MASK;
 
 /// One of the seven invariant categories verified by the gate (`UIF-VER-005`).
@@ -263,6 +264,7 @@ pub fn check_action_ellipsis(
     }
 }
 
+#[cfg(feature = "navbar")]
 /// Check that a navigation bar menu trigger conforms to the ellipsis biconditional (`UIF-NAV-002`, `UIF-PRIN-007`, `UIF-VER-005`).
 ///
 /// Delegates to [`NavBarMenuTrigger::validate_ellipsis`](crate::composite::navbar::NavBarMenuTrigger::validate_ellipsis).
@@ -404,6 +406,7 @@ pub fn check_icon_only_button_tooltip(
     }
 }
 
+#[cfg(feature = "password")]
 /// Check that a secret value is properly redacted in `Debug` and `Display` (`UIF-VER-005`, `NFR-009`).
 ///
 /// Asserts that the plaintext password does not appear in `Debug` or `Display` outputs,
@@ -487,16 +490,20 @@ pub fn audit_invariants() -> InvariantReport {
         "Create Directory ...",
         PromptBehaviour::LaunchesPrompt,
     )); // Pinned
-    let nav_trigger_immediate = crate::composite::navbar::NavBarMenuTrigger::new("file", "File");
-    report.record_result(check_navbar_trigger_ellipsis(&nav_trigger_immediate));
-    let nav_trigger_prompt =
-        crate::composite::navbar::NavBarMenuTrigger::new("rename", "Rename...")
+    #[cfg(feature = "navbar")]
+    {
+        let nav_trigger_immediate =
+            crate::composite::navbar::NavBarMenuTrigger::new("file", "File");
+        report.record_result(check_navbar_trigger_ellipsis(&nav_trigger_immediate));
+        let nav_trigger_prompt =
+            crate::composite::navbar::NavBarMenuTrigger::new("rename", "Rename...")
+                .with_dialog_prompt(true);
+        report.record_result(check_navbar_trigger_ellipsis(&nav_trigger_prompt));
+        let nav_trigger_icon = crate::composite::navbar::NavBarMenuTrigger::new("export", "")
+            .with_tooltip("Export...")
             .with_dialog_prompt(true);
-    report.record_result(check_navbar_trigger_ellipsis(&nav_trigger_prompt));
-    let nav_trigger_icon = crate::composite::navbar::NavBarMenuTrigger::new("export", "")
-        .with_tooltip("Export...")
-        .with_dialog_prompt(true);
-    report.record_result(check_navbar_trigger_ellipsis(&nav_trigger_icon));
+        report.record_result(check_navbar_trigger_ellipsis(&nav_trigger_icon));
+    }
 
     // 3. Emphasis Focal Point
     let modal_slots = [
@@ -552,11 +559,14 @@ pub fn audit_invariants() -> InvariantReport {
     report.record_result(check_icon_only_button_tooltip(false, None));
 
     // 6. Secret Redaction
-    let secret = crate::widget::password_model::SecretInput::new("sensitive-auth-token-987");
-    report.record_result(check_secret_redaction(&secret, "sensitive-auth-token-987"));
+    #[cfg(feature = "password")]
+    {
+        let secret = crate::widget::password_model::SecretInput::new("sensitive-auth-token-987");
+        report.record_result(check_secret_redaction(&secret, "sensitive-auth-token-987"));
 
-    let empty_secret = crate::widget::password_model::SecretInput::empty();
-    report.record_result(check_secret_redaction(&empty_secret, ""));
+        let empty_secret = crate::widget::password_model::SecretInput::empty();
+        report.record_result(check_secret_redaction(&empty_secret, ""));
+    }
 
     // 7. Validation Transition
     let p_pristine = check_validation_transition(EditStance::Pristine, true, false);
@@ -606,6 +616,6 @@ pub fn audit_invariants() -> InvariantReport {
     report
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "invariant_gate_tests.rs"]
 mod tests;

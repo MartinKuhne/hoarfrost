@@ -574,6 +574,6 @@ pub fn rail_width_interpolate(
     from_width + (to_width - from_width) * t
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "time_tests.rs"]
 mod time_tests;

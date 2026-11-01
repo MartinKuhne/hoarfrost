@@ -111,41 +111,89 @@
 //! Surface Geometry Constants in [`crate::token_lint`] rather than passed
 //! off as token reads.
 
+#[cfg(any(
+    feature = "empty-state",
+    feature = "grid-view",
+    feature = "navigation-rail"
+))]
+pub mod icon;
+#[cfg(any(
+    feature = "empty-state",
+    feature = "grid-view",
+    feature = "navigation-rail"
+))]
+pub use icon::Icon;
+
+#[cfg(feature = "breadcrumb")]
 pub mod breadcrumb;
+#[cfg(feature = "card")]
 pub mod card;
+#[cfg(feature = "code-block")]
 pub mod code_block;
+#[cfg(feature = "command-palette")]
 pub mod command_palette;
+#[cfg(feature = "diff-viewer")]
 pub mod diff_viewer;
+#[cfg(feature = "empty-state")]
 pub mod empty_state;
+#[cfg(feature = "expander")]
 pub mod expander;
+#[cfg(feature = "form-field")]
 pub mod form_field;
+#[cfg(feature = "grid-view")]
 pub mod grid_view;
+#[cfg(feature = "info-bar")]
 pub mod info_bar;
+#[cfg(feature = "keybind-recorder")]
 pub mod keybind_recorder;
+#[cfg(feature = "list-tile")]
 pub mod list_tile;
+#[cfg(feature = "navbar")]
 pub mod navbar;
+#[cfg(feature = "navigation-rail")]
 pub mod navigation_rail;
+#[cfg(feature = "notification")]
 pub mod notification;
+#[cfg(feature = "overflow-toolbar")]
 pub mod overflow_toolbar;
+#[cfg(feature = "pagination")]
 pub mod pagination;
+#[cfg(feature = "pips-pager")]
 pub mod pips_pager;
+#[cfg(feature = "scroll-view")]
 pub mod scroll_view;
+#[cfg(feature = "settings-row")]
 pub mod settings_row;
+#[cfg(feature = "side-sheet")]
 pub mod side_sheet;
+#[cfg(feature = "skeleton")]
 pub mod skeleton;
+#[cfg(feature = "split-divider")]
 pub mod split_divider;
+#[cfg(feature = "stepper")]
 pub mod stepper;
+#[cfg(feature = "tab-strip")]
 pub mod tab_strip;
+#[cfg(feature = "table")]
 pub mod table_cell;
+#[cfg(feature = "table")]
 pub mod table_column;
+#[cfg(feature = "table")]
 pub mod table_header;
+#[cfg(feature = "table")]
 pub mod table_view;
+#[cfg(feature = "toast")]
 pub mod toast;
+#[cfg(feature = "tree-row")]
 pub mod tree_row;
+#[cfg(feature = "tree-view")]
 pub mod tree_view;
+#[cfg(feature = "virtual-list")]
 pub mod virtual_list;
 
+#[cfg(feature = "code-block")]
 pub use code_block::{CodeBlock, CodeBlockModel, code_block};
+#[cfg(feature = "command-palette")]
 pub use command_palette::{
     CARD_HEIGHT, CARD_WIDTH, CommandPalette, CommandPaletteModel, CommandPaletteState,
     DIVIDER_STROKE, EscapeDisposition, FOOTER_HEIGHT, GLYPH_SEARCH, GROUP_HEADER_HEIGHT, LABEL_ESC,
@@ -154,48 +202,60 @@ pub use command_palette::{
     ROW_SINGLE_HEIGHT, SEARCH_HEIGHT, SEARCHING, TOP_OFFSET, card_bounds, command_palette,
     highlight_spans,
 };
+#[cfg(feature = "diff-viewer")]
 pub use diff_viewer::{
     DiffDisplayMode, DiffHunk, DiffLine, DiffLineKind, DiffViewer, DiffViewerModel, diff_viewer,
 };
-pub use empty_state::{
-    EmptyState, EmptyStateKind, EmptyStateModel, EmptyStateStyle, Icon, empty_state,
-};
+#[cfg(feature = "empty-state")]
+pub use empty_state::{EmptyState, EmptyStateKind, EmptyStateModel, EmptyStateStyle, empty_state};
+#[cfg(feature = "grid-view")]
 pub use grid_view::{
     BORDER_REST_WIDTH, BORDER_SELECTED_WIDTH, CHECKBOX_INSET, CHECKBOX_SIZE,
     DEFAULT_MIN_TILE_WIDTH, DEFAULT_TILE_HEIGHT, GAP, GLYPH_CHECK, GUTTER_WIDTH, GridNavKey,
     GridTile, GridView, GridViewModel, GridViewState, grid_view, solve_columns, tile_rect,
 };
+#[cfg(feature = "keybind-recorder")]
 pub use keybind_recorder::{KeyChord, KeybindRecorder, KeybindRecorderModel, keybind_recorder};
+#[cfg(feature = "navbar")]
 pub use navbar::{
     NAVBAR_HEIGHT_COMPACT, NAVBAR_HEIGHT_STANDARD, NavBar, NavBarMenuTrigger, NavBarModel,
     TRIGGER_HEIGHT_COMPACT, TRIGGER_HEIGHT_STANDARD, TRIGGER_PADDING_HORIZONTAL, TriggerStyle,
     navbar_trigger_element, resolve_trigger_style,
 };
+#[cfg(feature = "navigation-rail")]
 pub use navigation_rail::{
     COMPACT_WIDTH, EXPANDED_DEFAULT_WIDTH, EXPANDED_MAX_WIDTH, EXPANDED_MIN_WIDTH, GLYPH_TOGGLE,
     ICON_SIZE, INDICATOR_WIDTH, LABEL_TOGGLE, NavDestination, NavRailResize, NavigationRail,
     NavigationRailModel, NavigationRailState, ROW_HEIGHT, TOGGLE_SIZE, navigation_rail,
 };
+#[cfg(feature = "pagination")]
 pub use pagination::{PaginationBar, PaginationModel, pagination_bar};
+#[cfg(feature = "pips-pager")]
 pub use pips_pager::{PipsPager, PipsPagerModel, pips_pager};
+#[cfg(feature = "side-sheet")]
 pub use side_sheet::{
     SheetMode, SheetPlacement, SideSheet, SideSheetModel, SideSheetResize, SideSheetState,
     side_sheet,
 };
+#[cfg(feature = "skeleton")]
 pub use skeleton::{Skeleton, SkeletonStyle, skeleton};
+#[cfg(feature = "split-divider")]
 pub use split_divider::{
     SplitAxis, SplitDivider, SplitDividerModel, SplitDividerResize, SplitDividerState,
     SplitSnapshot, compute_grab_rect, split_divider, split_divider_geometry, split_divider_layers,
 };
+#[cfg(feature = "stepper")]
 pub use stepper::{
     StepItem, StepStatus, Stepper, StepperModel, StepperOrientation, WizardFooterConfig, stepper,
     wizard_footer,
 };
+#[cfg(feature = "tab-strip")]
 pub use tab_strip::{
     CLOSE_BUTTON_SIZE, DIRTY_DOT_DIAMETER, TAB_MAX_WIDTH, TAB_MIN_WIDTH, TAB_STRIP_HEIGHT,
     TabCloseVerdict, TabContextMenuModel, TabItem, TabItemStyle, TabStrip, TabStripModel,
     clamp_tab_width, resolve_tab_style, tab_context_menu,
 };
+#[cfg(feature = "tree-view")]
 pub use tree_view::{
     MAX_TREE_DEPTH, Modifiers, SEARCH_ACTION_SIZE, SEARCH_FOOTER_DIVIDER_WIDTH,
     SEARCH_FOOTER_HEIGHT, SEARCH_FOOTER_PADDING_X, SEARCH_FOOTER_PADDING_Y, SEARCH_INPUT_HEIGHT,

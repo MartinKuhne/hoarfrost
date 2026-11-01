@@ -49,6 +49,21 @@
 //! Unit tests live in the sibling `*_tests.rs` sidecars of each file.
 
 pub mod contract;
+#[cfg(any(
+    feature = "button",
+    feature = "toggle",
+    feature = "segmented",
+    feature = "menu",
+    feature = "tree-view",
+    feature = "chip",
+    feature = "text-input",
+    feature = "expander",
+    feature = "tab-strip",
+    feature = "navigation-rail",
+    feature = "stepper",
+    feature = "grid-view",
+    feature = "command-palette"
+))]
 pub mod project;
 pub mod tab_stop;
 
@@ -56,18 +71,31 @@ pub use contract::A11yContract;
 pub use contract::A11yRole;
 pub use contract::A11yValue;
 pub use contract::Checked;
+#[cfg(feature = "button")]
 pub use project::project_button;
+#[cfg(feature = "toggle")]
 pub use project::project_checkbox;
+#[cfg(feature = "chip")]
 pub use project::project_chip;
+#[cfg(feature = "expander")]
 pub use project::project_disclosure;
+#[cfg(feature = "menu")]
 pub use project::project_menu_row;
+#[cfg(feature = "menu")]
 pub use project::project_menu_row_open;
+#[cfg(feature = "button")]
 pub use project::project_progress;
+#[cfg(feature = "toggle")]
 pub use project::project_radio_group;
+#[cfg(feature = "toggle")]
 pub use project::project_radio_option;
+#[cfg(feature = "segmented")]
 pub use project::project_segment;
+#[cfg(feature = "segmented")]
 pub use project::project_segmented;
+#[cfg(feature = "text-input")]
 pub use project::project_text_input;
+#[cfg(feature = "tree-view")]
 pub use project::project_tree_row;
 pub use tab_stop::CompositeBoundary;
 pub use tab_stop::CompositeCategory;

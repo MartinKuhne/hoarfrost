@@ -214,6 +214,6 @@ pub const fn punish(stance: EditStance, invalid: bool, disallowed: bool) -> Puni
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "punish_tests.rs"]
 mod punish_tests;

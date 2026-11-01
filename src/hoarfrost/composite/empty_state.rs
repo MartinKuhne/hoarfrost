@@ -14,6 +14,7 @@
 //! Unit tests live in the sibling `empty_state_tests.rs` sidecar.
 
 use crate::binding::Commit;
+pub use crate::composite::icon::Icon;
 use crate::token::color::Palette;
 use crate::token::{shape, size, space, typography};
 use iced::advanced::layout::{self, Layout};
@@ -73,37 +74,6 @@ impl EmptyStateKind {
     #[must_use]
     pub fn is_error(&self) -> bool {
         matches!(self, Self::LoadError { .. })
-    }
-}
-
-/// An icon identifier or character glyph string for display within the badge.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Icon(pub String);
-
-impl Icon {
-    /// Create a new icon from a string representation.
-    #[must_use]
-    pub fn new(s: impl Into<String>) -> Self {
-        Self(s.into())
-    }
-}
-
-impl From<&str> for Icon {
-    fn from(s: &str) -> Self {
-        Self(s.to_string())
-    }
-}
-
-impl From<String> for Icon {
-    fn from(s: String) -> Self {
-        Self(s)
-    }
-}
-
-impl std::ops::Deref for Icon {
-    type Target = str;
-    fn deref(&self) -> &str {
-        &self.0
     }
 }
 

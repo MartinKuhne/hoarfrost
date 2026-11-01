@@ -388,6 +388,6 @@ pub fn total_members(boundaries: &[CompositeBoundary<'_>]) -> usize {
         .sum()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "tab_stop_tests.rs"]
 mod tab_stop_tests;

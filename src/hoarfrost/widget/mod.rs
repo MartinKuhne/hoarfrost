@@ -202,73 +202,130 @@
 //! and in both cases the value is a named constant rather than an inline
 //! number.
 
+#[cfg(feature = "auto-suggest")]
 pub mod auto_suggest_host;
+#[cfg(feature = "auto-suggest")]
 pub mod auto_suggest_model;
+#[cfg(feature = "avatar")]
 pub mod avatar;
+#[cfg(feature = "badge")]
 pub mod badge;
+#[cfg(feature = "badge")]
 pub mod badge_model;
+#[cfg(feature = "button")]
 pub mod button;
+#[cfg(feature = "button")]
 pub mod button_controller;
+#[cfg(feature = "button")]
 pub mod button_model;
+#[cfg(feature = "button")]
 pub mod button_widget;
+#[cfg(feature = "chip")]
 pub mod chip;
+#[cfg(feature = "chip")]
 pub mod chip_model;
+#[cfg(feature = "color-picker")]
 pub mod color_picker;
+#[cfg(feature = "combo-box")]
 pub mod combo_box;
+#[cfg(feature = "combo-box")]
 pub mod combo_host;
+#[cfg(feature = "combo-box")]
 pub mod combo_model;
+#[cfg(feature = "date-picker")]
 pub mod date_picker;
 pub mod focus;
 pub mod focusable;
+#[cfg(feature = "hyperlink")]
 pub mod hyperlink;
+#[cfg(feature = "hyperlink")]
 pub mod hyperlink_model;
+#[cfg(feature = "number-box")]
 pub mod number_box;
+#[cfg(feature = "number-box")]
 pub mod number_box_host;
+#[cfg(feature = "password")]
 pub mod password_host;
+#[cfg(feature = "password")]
 pub mod password_model;
+#[cfg(feature = "button")]
 pub mod progress;
+#[cfg(feature = "button")]
 pub mod progress_model;
+#[cfg(feature = "range-model")]
 pub mod range_model;
+#[cfg(feature = "range-slider")]
 pub mod range_slider;
+#[cfg(feature = "range-slider")]
 pub mod range_slider_model;
+#[cfg(feature = "rating")]
 pub mod rating;
 pub mod rove;
+#[cfg(feature = "search-box")]
 pub mod search_box;
+#[cfg(feature = "segmented")]
 pub mod segmented;
+#[cfg(feature = "segmented")]
 pub mod segmented_model;
+#[cfg(feature = "slider")]
 pub mod slider;
+#[cfg(feature = "slider")]
 pub mod slider_host;
+#[cfg(feature = "split-button")]
 pub mod split_button;
+#[cfg(feature = "split-button")]
 pub mod split_button_host;
+#[cfg(feature = "split-button")]
 pub mod split_button_model;
+#[cfg(feature = "text-area")]
 pub mod text_area_host;
+#[cfg(feature = "text-area")]
 pub mod text_area_model;
+#[cfg(feature = "text-input")]
 pub mod text_input;
+#[cfg(feature = "text-input")]
 pub mod text_input_controller;
+#[cfg(feature = "text-input")]
 pub mod text_input_model;
+#[cfg(feature = "time-picker")]
 pub mod time_picker;
+#[cfg(feature = "toggle")]
 pub mod toggle;
+#[cfg(feature = "toggle")]
 pub mod toggle_model;
+#[cfg(feature = "toggle")]
 pub mod toggle_widget;
 
+#[cfg(feature = "tooltip")]
 pub use crate::surface::tooltip::{Tooltip, TooltipContent, TooltipState, tooltip};
+#[cfg(feature = "avatar")]
 pub use avatar::{Avatar, AvatarModel, AvatarShape, AvatarSize, avatar};
+#[cfg(feature = "color-picker")]
 pub use color_picker::{
     ColorPicker, ColorPickerModel, ColorSwatchButton, Hsva, Rgba8, color_picker,
     color_swatch_button,
 };
+#[cfg(feature = "combo-box")]
 pub use combo_box::{ComboBox, ComboRung, MIN_WIDTH_COMPACT, Select, combo_box, select};
+#[cfg(feature = "combo-box")]
 pub use combo_model::{ComboBoxModel, SelectOption};
+#[cfg(feature = "date-picker")]
 pub use date_picker::{
     CalendarView, CalendarViewMode, CivilDate, DatePicker, DatePickerModel, DateRangePicker,
     DateSelection, Weekday, YearMonth, calendar_view, date_picker, date_range_picker,
 };
+#[cfg(feature = "range-slider")]
 pub use range_slider::{RangeSlider, range_slider};
+#[cfg(feature = "range-slider")]
 pub use range_slider_model::{RangeSliderModel, RangeThumb};
+#[cfg(feature = "rating")]
 pub use rating::{RatingControl, RatingModel, RatingStep, rating_control};
+#[cfg(feature = "search-box")]
 pub use search_box::{
     GLYPH_CLEAR, GLYPH_SEARCH, SEARCH_ACTION_SIZE, SEARCH_INPUT_HEIGHT, SEARCH_PLACEHOLDER,
     SearchBox, SearchBoxModel,
 };
+#[cfg(feature = "time-picker")]
 pub use time_picker::{AmPm, CivilTime, TimePicker, TimePickerModel, TimeSegment, time_picker};
+#[cfg(feature = "toggle")]
 pub use toggle_widget::{Checkbox, RadioGroup, ToggleSwitch};
