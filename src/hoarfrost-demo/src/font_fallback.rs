@@ -55,7 +55,7 @@
 //! Unit tests live in the sibling `font_fallback_tests.rs` sidecar.
 
 use std::borrow::Cow;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use iced::advanced::graphics::text::font_system;
@@ -172,7 +172,7 @@ fn platform_candidates() -> Vec<PathBuf> {
 #[cfg(windows)]
 fn windows_candidates() -> Vec<PathBuf> {
     let system_root = std::env::var("SYSTEMROOT").unwrap_or_else(|_| String::from("C:\\Windows"));
-    let fonts_dir = Path::new(&system_root).join("Fonts");
+    let fonts_dir = PathBuf::from(system_root).join("Fonts");
     WINDOWS_FONT_FILES
         .iter()
         .map(|file| fonts_dir.join(file))
