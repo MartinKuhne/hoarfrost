@@ -312,27 +312,36 @@ precise failure the check existed to prevent. Fixed to `>=`, with a test that bu
 card past the ceiling and asserts `CardTooTall`. This is what turned the empty-states
 section from a silent bad image into a visible finding.
 
-### 7.4 Pre-existing defects found, deliberately NOT repaired
+### 7.4 Pre-existing defects found
 
-All four were independently confirmed to exist at `HEAD` before this work, and all are
-outside the task's scope. They are reported, not fixed.
+Three were found during this work. All were confirmed to exist at `HEAD`, independent of
+anything in §7.1. All three were subsequently repaired; see §8.
 
-1. **`cargo fmt --check` is red at HEAD.** Five committed files in `src/hoarfrost/`
-   contain CRLF while `rustfmt.toml` sets `newline_style = "Unix"`:
-   `checkbox_ink_probe_tests.rs`, `composite/side_sheet.rs`,
-   `composite/side_sheet_tests.rs`, `strings.rs`, `strings_tests.rs`. Verified by
-   reading CR bytes out of `git show HEAD:src/hoarfrost/strings.rs`.
-2. **Three `layout_gate` goldens are stale.** They list 105 named widgets while the probe
-   finds 111. Verified by stashing every change from this task and re-running: the same
-   three fail on the untouched bin-only layout.
+1. **`cargo fmt --check` was red on a clean checkout.** Five `.rs` files in
+   `src/hoarfrost/` were CRLF in the working tree while `rustfmt.toml` sets
+   `newline_style = "Unix"`: `checkbox_ink_probe_tests.rs`,
+   `composite/side_sheet.rs`, `composite/side_sheet_tests.rs`, `strings.rs`,
+   `strings_tests.rs`.
+   *Correction:* the first diagnosis — "the committed blobs contain CRLF" — was wrong,
+   and the check that produced it was wrong too. Reading a blob through
+   `git show HEAD:<path> > file`, or splitting it into PowerShell lines, re-encodes the
+   line endings and reports CRLF whatever the blob actually holds. Byte-exact
+   `git cat-file blob` shows every one of those blobs is stored as **LF**. The CRLF was
+   introduced on checkout by `core.autocrlf = true`. No blob needed rewriting; only the
+   checkout rule did.
+2. **Three `layout_gate` goldens were stale.** They listed 105 named widgets while the
+   probe finds 111. Verified by stashing every change from this task and re-running: the
+   same three fail on the untouched bin-only layout.
 3. **Six rustdoc warnings in `src/hoarfrost`** — five `private_intra_doc_links` on
    `DEFAULT_*_ID` constants (`color_picker`, `color_swatch_button`, `date_picker`,
    `rating`, `time_picker`) and one unresolved link in `test_helpers.rs`. The five
    constants are the same five widgets the stale goldens are missing, so both defects
-   trace to one unfinished change. `src/hoarfrost` is untouched by this work.
-4. **`core.autocrlf = true`** in this clone silently rewrites LF files to CRLF on
-   checkout. It converted three `hoarfrost-demo` files during a `git stash pop`; they
-   were restored to LF. Anyone editing this repo should expect this.
+   trace to one unfinished change.
+
+A fourth hazard is environmental rather than a repo defect: `core.autocrlf = true` in
+this clone rewrites LF files to CRLF on checkout. It flipped three `hoarfrost-demo`
+files during a `git stash pop` mid-task; they were restored, and §8.1 removes the
+underlying cause for `.rs`.
 
 ### 7.5 Deviations from the plan's design
 
@@ -342,3 +351,90 @@ outside the task's scope. They are reported, not fixed.
 - The draw uses `hoarfrost_demo::theme::demo_theme()` rather than the planned hardcoded
   `Theme::Dark`, so PNGs match what the demo window actually shows.
 - Output is accepted as both a positional argument and `--out`.
+
+---
+
+## 8. Pre-existing breakage repaired
+
+All three defects in §7.4 are fixed. Each was confirmed red at `HEAD` before being touched.
+
+### 8.1 The line-ending gate
+
+`.gitattributes` now pins `*.rs text eol=lf`. That fixes the real cause — a clone with
+`core.autocrlf = true` checking `.rs` files out as CRLF while `rustfmt.toml` asks for
+`Unix` — instead of the symptom, so `cargo fmt --check` no longer depends on each clone's
+git configuration. No blob content changed, because no blob was wrong.
+
+Scoped to `.rs` deliberately. `src/hoarfrost/spec.md` is also checked out CRLF, but it is
+LF in the blob, nothing gates on it, and requirement files are not to be rewritten as a
+side effect of a formatting fix (`RUST-043`).
+
+### 8.2 The rustdoc warnings
+
+The five `DEFAULT_*_ID` constants are now `pub`, matching the crate's existing
+`pub const DEFAULT_*` convention (`DEFAULT_TITLE`, `DEFAULT_WIDTH`, `DEFAULT_MAX_RATING`,
+…). Each already carried a complete `///` comment written as though it were public, so the
+missing `pub` was the defect, not the docs. The unresolved link in `test_helpers.rs` now
+points at `iced::advanced::renderer::Headless::screenshot`, the path that actually
+resolves through a dependency `hoarfrost` declares.
+
+`cargo doc --workspace --all-features --no-deps` is warning-free.
+
+### 8.3 The stale layout goldens
+
+The probe found six named widgets the goldens did not list, and the registry test named
+the same five default ids §8.2 had just made public. Registering the defaults would have
+been the smaller change, but the goldens showed *two* widgets on `hoarfrost.date_picker`:
+the single picker and the range picker, indistinguishable, which the library's own docs
+forbid and which lets a registry entry be satisfied by either of them.
+
+So the five widget types are named in the demo instead, like every other widget there:
+
+| Section | New ids |
+|-------|---------|
+| Rating | `demo.atoms.rating.live` (`.read-only` / `.disabled` also named) |
+| Date picker | `demo.atoms.date-picker.single`, `demo.atoms.date-picker.range` |
+| Time picker | `demo.atoms.time-picker.live` (`.disabled` also named) |
+| Colour picker | `demo.atoms.colour-picker.live`, `demo.atoms.colour-swatch.trigger` |
+
+`REGISTRY` gains the six ids that register; the three that do not — a disabled or
+read-only control registers no focusable candidate — went to `UNADDRESSABLE`, which
+asserts them absent so neither list can drift quietly.
+
+The regenerated diff was reviewed line by line: two header count lines (`named 105 → 111`,
+`183 → 189`) and six added rows, at byte-identical geometry to the run taken before the
+rename. No unrelated layout drift.
+
+### 8.4 A regen run could destroy a golden
+
+`a_mismatching_golden_fails_loudly` fed the string `not the golden` through
+`check_golden` to inspect the failure message. Under `HOARFROST_DEMO_GOLDEN=1` that call
+*writes* — so any regen run scoped wider than the README's `matches_its_golden` filter
+overwrote `root-1400x900.txt` with that string and reported two confusing meta-test
+failures. This was reproduced, not theorised.
+
+`check_golden` is now split into `write_golden` and `compare_golden`, and the meta-tests
+use the writer-free one; `regen_requested` delegates to a pure `regen_requested_from`, so
+`regen_is_off_by_default` tests the rule instead of asserting the ambient environment is
+clean. Verified by running the whole `layout_gate::` filter with the switch on: 37 pass,
+goldens byte-identical, no stray files.
+
+### 8.5 A note on tooling, not on the repo
+
+Some edits in this session arrived with unrelated import reordering. The cause is a
+formatter running on save with edition-2021 import ordering while the crates declare
+`edition = "2024"`; because rustfmt follows `mod` declarations, editing `test_helpers.rs`
+also rewrote `test_helpers_tests.rs`. The committed code is rustfmt-clean under edition
+2024 — verified by running `rustfmt --check` on the `HEAD` blobs — so the churn was
+reverted file by file and the intended changes re-applied without a formatter in the path.
+Anyone automating edits here should confirm which edition their formatter uses.
+
+### 8.6 Gate status
+
+| Check | Before | After |
+|-------|--------|-------|
+| `cargo fmt --check` | red (newline style) | clean |
+| `cargo doc --workspace --all-features` | 6 warnings | clean |
+| `cargo nextest run --workspace --all-features` | 3 failures / 6185 | 6185 pass |
+| `cargo clippy --workspace --all-features --all-targets -- -D warnings` | clean | clean |
+| `cargo check --workspace --all-features` | clean | clean |

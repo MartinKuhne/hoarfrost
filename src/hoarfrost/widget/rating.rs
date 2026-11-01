@@ -239,7 +239,7 @@ pub type OnCancel<'a, Message> = Box<dyn Fn(Cancel<Option<f32>>) -> Message + 'a
 /// across rebuilds. A host with more than one rating on screen must give each
 /// one its own name through [`RatingControl::id`] — two controls sharing an id
 /// cannot be told apart by an id-addressed focus request.
-const DEFAULT_RATING_CONTROL_ID: &str = "hoarfrost.rating";
+pub const DEFAULT_RATING_CONTROL_ID: &str = "hoarfrost.rating";
 
 pub struct RatingControl<'a, Message> {
     model: RatingModel,

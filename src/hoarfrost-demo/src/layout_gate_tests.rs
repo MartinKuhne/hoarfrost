@@ -235,7 +235,7 @@ fn a_missing_golden_panics_instead_of_passing() {
     // `iced_test`'s `matches_image`: that helper would create the file and
     // return `true`, so a suite could report green forever against a
     // reference nobody ever reviewed.
-    let message = panic_message(|| check_golden("definitely-not-a-real-golden.txt", "anything"));
+    let message = panic_message(|| compare_golden("definitely-not-a-real-golden.txt", "anything"));
     assert!(message.contains("is missing"), "{message}");
     assert!(message.contains("FAIL"), "{message}");
     assert!(
@@ -257,7 +257,7 @@ fn a_matching_golden_passes_without_writing() {
     }
     let before = std::fs::read(&existing).expect("the root golden must be readable");
     let text = String::from_utf8(before.clone()).expect("goldens are UTF-8 text");
-    check_golden("root-1400x900.txt", &text);
+    compare_golden("root-1400x900.txt", &text);
     let after = std::fs::read(&existing).expect("the root golden must still be readable");
     assert_eq!(
         before, after,
@@ -271,22 +271,36 @@ fn a_mismatching_golden_fails_loudly() {
     if !existing.exists() {
         return;
     }
-    let message = panic_message(|| check_golden("root-1400x900.txt", "not the golden"));
+    // `compare_golden`, never `check_golden`: this feeds a deliberate
+    // mismatch, and a writer would put `not the golden` into the real file.
+    let before = std::fs::read(&existing).expect("the root golden must be readable");
+    let message = panic_message(|| compare_golden("root-1400x900.txt", "not the golden"));
     assert!(message.contains("differs"), "{message}");
     assert!(
         message.contains(GOLDEN_ENV),
         "the failure must name the regen switch"
     );
+    // The regression this exists for: a mismatching compare must leave the
+    // reference alone, whatever the ambient regen switch says.
+    let after = std::fs::read(&existing).expect("the root golden must still be readable");
+    assert_eq!(before, after, "comparing a golden must never rewrite it");
 }
 
 #[test]
 fn regen_is_off_by_default() {
-    // `std::env::set_var` is `unsafe` in edition 2024, so the gate must be
-    // correct with the variable simply absent — which is every normal run.
+    // `std::env::set_var` is `unsafe` in edition 2024, so the rule is checked
+    // as a pure function instead of by mutating an environment other tests
+    // are reading in parallel. Only an exact "1" opts in; everything else
+    // stays compare-only, so the gate can never rewrite a golden by accident.
     assert!(
-        !regen_requested(),
+        !regen_requested_from(None),
         "the gate must never rewrite goldens unless the operator opted in"
     );
+    assert!(!regen_requested_from(Some("")));
+    assert!(!regen_requested_from(Some("0")));
+    assert!(!regen_requested_from(Some("2")));
+    assert!(!regen_requested_from(Some("true")));
+    assert!(regen_requested_from(Some("1")));
 }
 
 // ---------------------------------------------------------------------------

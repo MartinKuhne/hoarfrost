@@ -850,7 +850,7 @@ fn draw_preview_well<Renderer>(
 /// Stable by construction, so the router keeps addressing the same control
 /// across rebuilds. A host with more than one swatch button on screen must
 /// give each one its own name through [`ColorSwatchButton::with_id`].
-const DEFAULT_COLOR_SWATCH_BUTTON_ID: &str = "hoarfrost.color_swatch_button";
+pub const DEFAULT_COLOR_SWATCH_BUTTON_ID: &str = "hoarfrost.color_swatch_button";
 
 /// Standalone trigger button displaying a color swatch preview with hex label (§3.12, `UIF-ATOM-012`).
 pub struct ColorSwatchButton<'a, Message> {
@@ -1240,7 +1240,7 @@ pub struct ColorPickerState {
 /// Stable by construction, so the router keeps addressing the same control
 /// across rebuilds. A host with more than one picker on screen must give each
 /// one its own name through [`ColorPicker::with_id`].
-const DEFAULT_COLOR_PICKER_ID: &str = "hoarfrost.color_picker";
+pub const DEFAULT_COLOR_PICKER_ID: &str = "hoarfrost.color_picker";
 
 /// Interactive color picker widget combining trigger button and modal flyout (§3.12, `UIF-ATOM-012`).
 pub struct ColorPicker<'a, Message> {

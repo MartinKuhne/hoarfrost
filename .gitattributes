@@ -1,0 +1,12 @@
+# Rust sources are LF, always.
+#
+# `rustfmt.toml` sets `newline_style = "Unix"`, so a CRLF `.rs` file fails
+# `cargo fmt --check` — and with `core.autocrlf = true` a clone can rewrite
+# LF files to CRLF on checkout without anyone editing them. Pinning the
+# attribute here makes the gate's outcome independent of each clone's
+# configuration rather than a property of whoever committed last.
+#
+# Scoped to `.rs` on purpose. `src/hoarfrost/spec.md` is also stored with
+# CRLF, but nothing gates on it and requirement files are not to be
+# rewritten as a side effect of a formatting fix.
+*.rs text eol=lf

@@ -64,7 +64,15 @@ const MIN_WIDGET_EDGE: f32 = 8.0;
 /// publishes its own box, and the two separators are registered under
 /// their declared `m-sep-1` / `m-sep-2` keys rather than the empty-key
 /// id a keyless separator used to produce.
-const REGISTRY: [&str; 160] = [
+///
+/// The color picker, color swatch button, date picker, rating and time
+/// picker used to fall back to the library's default id, which put the
+/// single date picker and the date range picker on one shared
+/// `hoarfrost.date_picker` — an id-addressed focus request could not tell
+/// them apart, and a registry entry matching two records cannot notice
+/// either of them going missing. They are named `demo.atoms.*` like every
+/// other widget here.
+const REGISTRY: [&str; 166] = [
     "demo.atoms.button.Danger.busy",
     "demo.atoms.button.Danger.live",
     "demo.atoms.button.Ghost.busy",
@@ -85,6 +93,10 @@ const REGISTRY: [&str; 160] = [
     "demo.atoms.checkbox.2.label",
     "demo.atoms.checkbox.3",
     "demo.atoms.checkbox.3.label",
+    "demo.atoms.colour-picker.live",
+    "demo.atoms.colour-swatch.trigger",
+    "demo.atoms.date-picker.range",
+    "demo.atoms.date-picker.single",
     "demo.atoms.link.external",
     "demo.atoms.link.internal",
     "demo.atoms.password.disabled",
@@ -95,6 +107,7 @@ const REGISTRY: [&str; 160] = [
     "demo.atoms.radio.label-2",
     "demo.atoms.range.live.lower",
     "demo.atoms.range.live.upper",
+    "demo.atoms.rating.live",
     "demo.atoms.segmented",
     "demo.atoms.split.control",
     "demo.atoms.switch.busy",
@@ -108,6 +121,7 @@ const REGISTRY: [&str; 160] = [
     "demo.atoms.text.invalid",
     "demo.atoms.text.live",
     "demo.atoms.text.readonly",
+    "demo.atoms.time-picker.live",
     "demo.chrome.close",
     "demo.chrome.status_bar",
     "demo.composites.form.valid",
@@ -232,7 +246,7 @@ const REGISTRY: [&str; 160] = [
 /// These are asserted **absent** rather than ignored. If a future hoarfrost
 /// change makes one of them appear, this test fails and the id moves into
 /// [`REGISTRY`] — the list cannot quietly drift in either direction.
-const UNADDRESSABLE: [(&str, &str); 4] = [
+const UNADDRESSABLE: [(&str, &str); 7] = [
     (
         "demo.atoms.button.Primary.disabled",
         "a disabled hoarfrost `Button` registers no focusable candidate, so the \
@@ -249,9 +263,22 @@ const UNADDRESSABLE: [(&str, &str); 4] = [
          `<id>.lower` / `<id>.upper` rather than under the bare id",
     ),
     (
+        "demo.atoms.rating.disabled",
+        "same for a disabled `RatingControl`",
+    ),
+    (
+        "demo.atoms.rating.read-only",
+        "a read-only `RatingControl` takes no input, so it registers no candidate; only \
+         the live one is addressable",
+    ),
+    (
         "demo.atoms.split",
         "the `SplitDivider` is not focusable and exposes no candidate kind, so only \
          `demo.atoms.split.control` (the button inside it) is addressable",
+    ),
+    (
+        "demo.atoms.time-picker.disabled",
+        "same for a disabled `TimePicker`",
     ),
 ];
 
@@ -266,27 +293,40 @@ fn golden_path(name: &str) -> PathBuf {
         .join(name)
 }
 
-/// Whether the goldens should be rewritten rather than compared.
-fn regen_requested() -> bool {
-    std::env::var(GOLDEN_ENV).is_ok_and(|value| value == "1")
+/// Whether a given value of the regen switch asks for goldens to be rewritten.
+///
+/// Split out from [`regen_requested`] so the rule can be tested without
+/// mutating the process environment, which tests share and run in parallel.
+fn regen_requested_from(value: Option<&str>) -> bool {
+    value.is_some_and(|value| value == "1")
 }
 
-/// Compares `actual` against the golden `name`, or rewrites it on request.
-///
-/// A missing golden panics. That is deliberate: `iced_test`'s snapshot
-/// helpers would happily create the file and report success, turning a
-/// never-reviewed reference into a permanent green.
-fn check_golden(name: &str, actual: &str) {
-    let path = golden_path(name);
+/// Whether the goldens should be rewritten rather than compared.
+fn regen_requested() -> bool {
+    regen_requested_from(std::env::var(GOLDEN_ENV).ok().as_deref())
+}
 
-    if regen_requested() {
-        let dir = path
-            .parent()
-            .expect("a golden path always has a parent directory");
-        std::fs::create_dir_all(dir).expect("the golden directory must be creatable");
-        std::fs::write(&path, actual).expect("the golden must be writable");
-        return;
-    }
+/// Rewrites the golden `name` with `actual`.
+fn write_golden(name: &str, actual: &str) {
+    let path = golden_path(name);
+    let dir = path
+        .parent()
+        .expect("a golden path always has a parent directory");
+    std::fs::create_dir_all(dir).expect("the golden directory must be creatable");
+    std::fs::write(&path, actual).expect("the golden must be writable");
+}
+
+/// Compares `actual` against the golden `name` and never writes it.
+///
+/// The meta-tests use this rather than [`check_golden`], because they feed
+/// a deliberate mismatch to inspect the failure message. Under
+/// `HOARFROST_DEMO_GOLDEN=1` a [`check_golden`] call *writes* that
+/// mismatch, so a whole-suite regen run overwrote `root-1400x900.txt` with
+/// the string `not the golden` and reported two confusing meta-test
+/// failures instead. Keeping the writers out of the meta-tests makes the
+/// goldens safe however wide a regen run is scoped.
+fn compare_golden(name: &str, actual: &str) {
+    let path = golden_path(name);
 
     match std::fs::read_to_string(&path) {
         Ok(expected) => assert_eq!(
@@ -304,6 +344,19 @@ fn check_golden(name: &str, actual: &str) {
             path.display()
         ),
     }
+}
+
+/// Compares `actual` against the golden `name`, or rewrites it on request.
+///
+/// A missing golden panics. That is deliberate: `iced_test`'s snapshot
+/// helpers would happily create the file and report success, turning a
+/// never-reviewed reference into a permanent green.
+fn check_golden(name: &str, actual: &str) {
+    if regen_requested() {
+        write_golden(name, actual);
+        return;
+    }
+    compare_golden(name, actual);
 }
 
 /// Captures the whole demo root at `size`.
