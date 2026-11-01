@@ -10,3 +10,8 @@
 # CRLF, but nothing gates on it and requirement files are not to be
 # rewritten as a side effect of a formatting fix.
 *.rs text eol=lf
+
+# Gallery screenshots are documentation, and a mangled byte makes a broken
+# image rather than a diff someone can read. Declared binary so no
+# checkout-time line-ending rule ever touches them.
+*.png binary
