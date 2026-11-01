@@ -1,0 +1,56 @@
+[package]
+name = "hoarfrost-gallery"
+version = "0.1.0"
+edition = "2024"
+description = "Renders hoarfrost demo sections to individual PNG files for documentation"
+license = "MIT"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+# The PNG sweep binary. Declared explicitly rather than left to `src/main.rs`
+# auto-discovery so the target name is pinned and the lib/bin split stays
+# visible in the manifest: the binary composes, the library implements.
+[[bin]]
+name = "hoarfrost-gallery"
+path = "src/main.rs"
+
+[dependencies]
+# `test-helpers` is what makes the capture harness (`headless_renderer`,
+# `RecordCandidates`, `PIXEL_SCALE`) part of hoarfrost's normal API. The
+# feature selects no extra crate — see the `[features]` note in
+# `src/hoarfrost/Cargo.toml`.
+hoarfrost = { path = "../hoarfrost", features = ["test-helpers"] }
+
+# The catalog this tool renders. The demo is a library first and a window
+# second (`src/hoarfrost-demo/src/lib.rs`), so the sweep draws the very same
+# sections the demo window shows rather than a second, drifting copy of them.
+hoarfrost-demo = { path = "../hoarfrost-demo" }
+
+# Feature set MUST match `hoarfrost`'s exactly (PLAN C3) or the re-exported
+# iced types on the two sides of the crate boundary do not line up. See
+# `src/hoarfrost/Cargo.toml` and `src/hoarfrost-demo/Cargo.toml`.
+iced = { version = "0.14.0", features = [
+    "wgpu",
+    "tiny-skia",
+    "fira-sans",
+    "advanced-shaping",
+    "advanced",
+] }
+
+# `iced`'s public surface never re-exports `UserInterface` —
+# `iced::advanced` has no `user_interface` line — so the build/operate/draw
+# loop the capture driver runs has to be named directly. Same reasoning as
+# `src/hoarfrost/Cargo.toml`; only the runtime is needed here, because the
+# concrete renderer comes through `hoarfrost::test_helpers`.
+iced_runtime = "0.14.0"
+
+# Already in the lock graph at 0.18.1, so this adds no new weight. Chosen over
+# hand-rolling an encoder (`RUST-022`).
+png = "0.18"
+
+[dev-dependencies]
+# Keeps every filesystem-touching test inside an isolated directory
+# (`RUST-006`).
+tempfile = "3"

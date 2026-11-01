@@ -20,7 +20,7 @@
 //! The step indicator paints from [`StepItem::status`], never from
 //! `StepperModel::current_step`, and the framework offers nothing that
 //! keeps the two in sync. So the host does it: every wizard transition
-//! here rewrites the ladder through [`statuses_for`], which is also what
+//! here rewrites the ladder through `statuses_for`, which is also what
 //! makes `linear` navigation semantics real — `can_select` only lets a
 //! step through once the ladder has actually marked it `Completed`.
 //!
