@@ -422,6 +422,6 @@ impl PreRankCoordinator {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "pre_rank_tests.rs"]
 mod pre_rank_tests;

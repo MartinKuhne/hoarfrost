@@ -183,7 +183,9 @@ use crate::token_lint::{
 /// scalar — its body is a tolerance comparison, a ratio assertion, a colour
 /// formatter and a rectangle constructor — so like the entries above it adds a
 /// scanned file without adding a governed one.
-const PIN_FILES_SCANNED: usize = 185;
+/// 186 as of the shared `Icon` value in `composite/icon.rs`, which is scanned
+/// and joins Rule B's composite scope.
+const PIN_FILES_SCANNED: usize = 186;
 /// Files Rule A treats as the colour-definition layer.
 const PIN_RULE_A_FILES: usize = 1;
 /// Files Rule B treats as widget/surface code.
@@ -241,7 +243,8 @@ const PIN_RULE_A_FILES: usize = 1;
 /// 104 as of Increments 24 & 25 (`UIF-NAV-001`, `UIF-NAV-003`, `UIF-TAB-003`): `composite/navbar.rs` and `composite/tab_strip.rs`.
 /// 105 as of `UIF-COMP-016`: `composite/split_divider.rs`.
 /// 106 as of `UIF-PANE-003`: `widget/search_box.rs`.
-const PIN_RULE_B_FILES: usize = 106;
+/// 107 as of the shared icon value: `composite/icon.rs`.
+const PIN_RULE_B_FILES: usize = 107;
 /// Colour constructors found inside `token/color.rs`.
 const PIN_COLOUR_DEFINITIONS: usize = 26;
 /// Visual scalars reading a token path.

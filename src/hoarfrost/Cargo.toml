@@ -1,6 +1,6 @@
 [package]
 name = "hoarfrost"
-version = "0.2.0"
+version = "0.14.0"
 edition = "2024"
 description = "A design system and widget framework built on Iced"
 license = "MIT"
@@ -18,8 +18,168 @@ path = "mod.rs"
 [[bin]]
 name = "gallery"
 path = "bin/gallery.rs"
+required-features = ["gallery"]
 
 [features]
+# The core is always compiled: tokens, state, geometry, identity, strings,
+# focus policy, bindings, validation and the layout rules. Everything a
+# developer can instantiate is opt-in, one feature per public widget.
+default = []
+
+# ---------------------------------------------------------------------------
+# Atoms (`widget::*`)
+# ---------------------------------------------------------------------------
+avatar = ["badge"]
+badge = []
+# `button` also carries the shared `button_widget`/`progress` pair: the live
+# button is the primitive nearly every other atom composes, so it is the base
+# every other interactive widget builds on.
+button = ["tooltip"]
+chip = []
+color-picker = []
+combo-box = ["menu", "text-input"]
+date-picker = []
+hyperlink = ["button"]
+number-box = ["button", "range-model", "text-input"]
+password = ["text-input"]
+# `progress` lives in the `button` cluster because the two modules are
+# mutually recursive (a busy button reserves a spinner; a progress bar paints
+# through the button widget). The feature exists so a developer can ask for
+# it by name.
+progress = ["button"]
+range-slider = ["range-model"]
+rating = []
+search-box = []
+segmented = ["button"]
+slider = ["button", "range-model"]
+split-button = ["button", "menu"]
+text-area = ["text-input"]
+text-input = ["button"]
+time-picker = []
+toggle = ["button"]
+auto-suggest = ["menu", "text-input", "tooltip"]
+
+# ---------------------------------------------------------------------------
+# Composites (`composite::*`)
+# ---------------------------------------------------------------------------
+breadcrumb = ["button", "menu"]
+card = ["button"]
+code-block = []
+command-palette = ["text-input"]
+diff-viewer = []
+empty-state = ["toast"]
+expander = ["button"]
+form-field = ["button"]
+grid-view = ["tree-view"]
+info-bar = ["button", "notification"]
+keybind-recorder = []
+list-tile = ["button"]
+navbar = ["tooltip"]
+navigation-rail = ["badge", "range-model", "tooltip"]
+notification = []
+overflow-toolbar = ["button", "menu"]
+pagination = []
+pips-pager = []
+scroll-view = []
+settings-row = ["button"]
+side-sheet = ["zorder"]
+skeleton = []
+split-divider = ["button"]
+stepper = []
+tab-strip = ["menu", "tooltip"]
+table = ["tree-view", "virtual-list"]
+toast = ["info-bar", "notification", "tooltip", "zorder"]
+tree-row = ["button", "list-tile", "virtual-list"]
+tree-view = ["virtual-list"]
+virtual-list = ["scroll-view"]
+
+# ---------------------------------------------------------------------------
+# Surfaces (`surface::*`)
+# ---------------------------------------------------------------------------
+menu = ["button", "tooltip"]
+modal = ["zorder"]
+dialog = ["button", "zorder"]
+movable = ["zorder"]
+popover = ["zorder"]
+tooltip = []
+zorder = ["menu"]
+
+# ---------------------------------------------------------------------------
+# Shared and meta features
+# ---------------------------------------------------------------------------
+# The interval model shared by `slider`, `range-slider`, `number-box` and
+# `navigation-rail`. It has no widget of its own; depend on one of those
+# instead of asking for this directly.
+range-model = []
+
+# Every public widget. `cargo add hoarfrost --features all` is the
+# "I want the whole framework" switch.
+all = [
+    "avatar",
+    "badge",
+    "button",
+    "chip",
+    "color-picker",
+    "combo-box",
+    "date-picker",
+    "hyperlink",
+    "number-box",
+    "password",
+    "progress",
+    "range-slider",
+    "rating",
+    "search-box",
+    "segmented",
+    "slider",
+    "split-button",
+    "text-area",
+    "text-input",
+    "time-picker",
+    "toggle",
+    "auto-suggest",
+    "breadcrumb",
+    "card",
+    "code-block",
+    "command-palette",
+    "diff-viewer",
+    "empty-state",
+    "expander",
+    "form-field",
+    "grid-view",
+    "info-bar",
+    "keybind-recorder",
+    "list-tile",
+    "navbar",
+    "navigation-rail",
+    "notification",
+    "overflow-toolbar",
+    "pagination",
+    "pips-pager",
+    "scroll-view",
+    "settings-row",
+    "side-sheet",
+    "skeleton",
+    "split-divider",
+    "stepper",
+    "tab-strip",
+    "table",
+    "toast",
+    "tree-row",
+    "tree-view",
+    "virtual-list",
+    "menu",
+    "modal",
+    "dialog",
+    "movable",
+    "popover",
+    "tooltip",
+    "zorder",
+]
+
+# The in-crate `gallery` binary and the documentation sweep: every widget plus
+# the gallery data modules.
+gallery = ["all"]
+
 # Publish the headless capture harness (`test_helpers`) as part of the
 # crate's normal API so a downstream crate can drive hoarfrost's widgets
 # through the real paint path in its own tests.

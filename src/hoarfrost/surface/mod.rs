@@ -16,13 +16,23 @@
 //! The menu's equivalent lives inside [`menu`] as
 //! [`row_action`](menu::row_action).
 
+#[cfg(feature = "dialog")]
 pub mod dialog_button;
+#[cfg(feature = "movable")]
 pub mod drag_tier;
+#[cfg(feature = "dialog")]
 pub mod input_dialog;
+#[cfg(feature = "menu")]
 pub mod menu;
+#[cfg(feature = "modal")]
 pub mod modal;
+#[cfg(feature = "modal")]
 pub mod modal_tier;
+#[cfg(feature = "movable")]
 pub mod movable;
+#[cfg(feature = "popover")]
 pub mod popover;
+#[cfg(feature = "tooltip")]
 pub mod tooltip;
+#[cfg(feature = "zorder")]
 pub mod zorder;

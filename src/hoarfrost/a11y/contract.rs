@@ -448,6 +448,6 @@ impl std::fmt::Display for A11yContract<'_> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "contract_tests.rs"]
 mod contract_tests;

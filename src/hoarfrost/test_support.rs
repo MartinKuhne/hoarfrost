@@ -9,7 +9,18 @@
 //! owns product behaviour - each helper mirrors exactly what the sidecars it
 //! came from already did.
 
-use iced::{Color, Rectangle};
+use iced::Color;
+#[cfg(any(
+    feature = "all",
+    feature = "dialog",
+    feature = "modal",
+    feature = "movable",
+    feature = "zorder",
+    feature = "virtual-list",
+    feature = "tree-row",
+    feature = "table"
+))]
+use iced::Rectangle;
 
 /// Whether `actual` is within `5e-4` of `expected`.
 ///
@@ -19,6 +30,17 @@ use iced::{Color, Rectangle};
 /// own local `approx` - a different contract gets a different helper.
 ///
 /// Purity: pure.
+#[cfg(any(
+    feature = "all",
+    feature = "card",
+    feature = "notification",
+    feature = "form-field",
+    feature = "expander",
+    feature = "list-tile",
+    feature = "settings-row",
+    feature = "scroll-view",
+    feature = "info-bar"
+))]
 pub(crate) fn approx(actual: f32, expected: f32) -> bool {
     (actual - expected).abs() < 5e-4
 }
@@ -33,6 +55,13 @@ pub(crate) fn approx(actual: f32, expected: f32) -> bool {
 /// # Panics
 ///
 /// Panics when the two ratios differ by `0.0005` or more.
+#[cfg(any(
+    feature = "all",
+    feature = "badge",
+    feature = "button",
+    feature = "number-box",
+    feature = "slider"
+))]
 pub(crate) fn assert_ratio(actual: f32, expected: f32, what: &str) {
     let measured = f64::from(actual);
     let wanted = f64::from(expected);
@@ -60,6 +89,16 @@ pub(crate) fn rgb8(color: Color) -> String {
 /// which is what some sidecars spelled out; both spellings collapsed here.
 ///
 /// Purity: pure.
+#[cfg(any(
+    feature = "all",
+    feature = "dialog",
+    feature = "modal",
+    feature = "movable",
+    feature = "zorder",
+    feature = "virtual-list",
+    feature = "tree-row",
+    feature = "table"
+))]
 pub(crate) fn rect(x: f32, y: f32, width: f32, height: f32) -> Rectangle {
     Rectangle {
         x,

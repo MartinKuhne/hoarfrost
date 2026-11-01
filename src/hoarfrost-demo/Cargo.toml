@@ -1,6 +1,6 @@
 [package]
 name = "hoarfrost-demo"
-version = "0.1.0"
+version = "0.14.0"
 edition = "2024"
 description = "A standalone runnable showcase of the hoarfrost UI framework"
 license = "MIT"
@@ -18,7 +18,7 @@ name = "hoarfrost-demo"
 path = "src/main.rs"
 
 [dependencies]
-hoarfrost = { path = "../hoarfrost", features = ["test-helpers"] }
+hoarfrost = { path = "../hoarfrost", features = ["test-helpers", "all"] }
 # Feature set MUST match `hoarfrost`'s exactly (PLAN C3) or the re-exported
 # iced types on the two sides of the boundary do not line up. See
 # `src/hoarfrost/Cargo.toml`.

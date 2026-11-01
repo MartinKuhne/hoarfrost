@@ -50,6 +50,7 @@
 
 pub mod disallowed;
 pub mod punish;
+#[cfg(feature = "text-area")]
 pub mod recovery;
 pub mod stance;
 
@@ -60,8 +61,12 @@ pub use disallowed::FILENAME_ILLEGAL_CHARS;
 pub use punish::PunishReason;
 pub use punish::Punishment;
 pub use punish::punish;
+#[cfg(feature = "text-area")]
 pub use recovery::EditSnapshot;
+#[cfg(feature = "text-area")]
 pub use recovery::RecoverySession;
+#[cfg(feature = "text-area")]
 pub use recovery::RestoredFields;
+#[cfg(feature = "text-area")]
 pub use recovery::ScrollOffset;
 pub use stance::EditStance;

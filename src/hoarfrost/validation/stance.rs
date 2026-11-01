@@ -114,6 +114,6 @@ impl fmt::Display for EditStance {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "stance_tests.rs"]
 mod stance_tests;

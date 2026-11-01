@@ -98,9 +98,9 @@
 //!
 //! # Shipping to other crates
 //!
-//! This module is gated on `any(test, feature = "test-helpers")`. Under
-//! `cargo test` it is here with no flag; a downstream crate gets the same
-//! harness by turning the feature on. The feature selects **nothing** —
+//! This module is gated on `any(test, feature = "test-helpers")`. Internal
+//! tests use it, and a downstream crate gets the same harness by turning the
+//! feature on. The feature selects **nothing** —
 //! every crate the harness needs is already compiled as part of `iced`, so
 //! a consumer that turns it on adds no dependency and no code to anything
 //! that did not. See the `[features]` note in `Cargo.toml`.
@@ -1797,6 +1797,6 @@ pub fn assert_panics(what: &str, probe: impl FnOnce()) -> String {
     panic_text(&outcome)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "test_helpers_tests.rs"]
 mod test_helpers_tests;

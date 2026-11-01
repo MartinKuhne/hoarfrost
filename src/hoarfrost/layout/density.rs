@@ -372,6 +372,7 @@ pub fn check_row_density<'a>(
     }
 }
 
+#[cfg(feature = "overflow-toolbar")]
 /// The rung an [`OverflowToolbar`](crate::composite::overflow_toolbar)
 /// strip declares, read from its own `STRIP_HEIGHT` rather than restated.
 ///
@@ -382,6 +383,7 @@ pub fn overflow_toolbar_declared_density() -> Option<ControlDensity> {
     ControlDensity::from_height(crate::composite::overflow_toolbar::STRIP_HEIGHT)
 }
 
+#[cfg(feature = "form-field")]
 /// The rung a [`FormField`](crate::composite::form_field) control slot
 /// declares, read from its own `CONTROL_SLOT_HEIGHT`.
 #[must_use]
@@ -389,6 +391,7 @@ pub fn form_field_declared_density() -> Option<ControlDensity> {
     ControlDensity::from_height(crate::composite::form_field::CONTROL_SLOT_HEIGHT)
 }
 
+#[cfg(feature = "overflow-toolbar")]
 /// Check the controls a host places in an
 /// [`OverflowToolbar`](crate::composite::overflow_toolbar) strip against
 /// the rung the strip itself declares.
@@ -402,6 +405,7 @@ pub fn check_overflow_toolbar<'a>(controls: &[RowSlot<'a>]) -> Option<DensityRep
         .map(|declared| check_row_density(DensityBand::OverflowToolbar, declared, controls))
 }
 
+#[cfg(feature = "form-field")]
 /// Check the controls a host places in a
 /// [`FormField`](crate::composite::form_field) row against the rung the
 /// field's control slot declares.
@@ -418,6 +422,6 @@ pub fn check_form_field_row<'a>(controls: &[RowSlot<'a>]) -> Option<DensityRepor
         .map(|declared| check_row_density(DensityBand::FormRow, declared, controls))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "density_tests.rs"]
 mod density_tests;

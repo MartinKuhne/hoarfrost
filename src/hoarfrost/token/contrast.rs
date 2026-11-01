@@ -831,6 +831,6 @@ pub fn assert_contrast(fg: Color, bg: Color, min_ratio: f32, label: &str) {
     );
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "contrast_tests.rs"]
 mod contrast_tests;

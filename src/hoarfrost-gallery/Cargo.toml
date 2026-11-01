@@ -1,6 +1,6 @@
 [package]
 name = "hoarfrost-gallery"
-version = "0.1.0"
+version = "0.14.0"
 edition = "2024"
 description = "Renders hoarfrost demo sections to individual PNG files for documentation"
 license = "MIT"
@@ -21,7 +21,7 @@ path = "src/main.rs"
 # `RecordCandidates`, `PIXEL_SCALE`) part of hoarfrost's normal API. The
 # feature selects no extra crate — see the `[features]` note in
 # `src/hoarfrost/Cargo.toml`.
-hoarfrost = { path = "../hoarfrost", features = ["test-helpers"] }
+hoarfrost = { path = "../hoarfrost", features = ["test-helpers", "all"] }
 
 # The catalog this tool renders. The demo is a library first and a window
 # second (`src/hoarfrost-demo/src/lib.rs`), so the sweep draws the very same

@@ -146,6 +146,6 @@ pub const PLACEHOLDER_12H: &str = "--:-- --";
 /// Placeholder for a 12-hour time with seconds (§3.11).
 pub const PLACEHOLDER_12H_SEC: &str = "--:--:-- --";
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "strings_tests.rs"]
 mod strings_tests;

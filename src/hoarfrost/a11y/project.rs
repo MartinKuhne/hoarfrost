@@ -48,18 +48,33 @@
 //!
 //! Unit tests live in the sibling `project_tests.rs` sidecar.
 
-use crate::a11y::contract::{A11yContract, A11yRole, A11yValue, Checked};
+#[cfg(any(feature = "button", feature = "text-input"))]
+use crate::a11y::contract::A11yValue;
+#[cfg(any(feature = "menu", feature = "toggle", feature = "segmented"))]
+use crate::a11y::contract::Checked;
+use crate::a11y::contract::{A11yContract, A11yRole};
+#[cfg(feature = "expander")]
 use crate::composite::expander::DisclosureToggle;
+#[cfg(feature = "tree-view")]
 use crate::composite::tree_view::VisibleRow;
+#[cfg(feature = "menu")]
 use crate::surface::menu::model::Row;
+#[cfg(feature = "menu")]
 use crate::surface::menu::model::RowKind;
+#[cfg(feature = "button")]
 use crate::widget::button_model::ButtonModel;
+#[cfg(feature = "chip")]
 use crate::widget::chip_model::ChipModel;
+#[cfg(feature = "button")]
 use crate::widget::progress_model::{ProgressModel, ProgressStatus};
+#[cfg(feature = "segmented")]
 use crate::widget::segmented_model::{SegmentedModel, SelectionMode};
+#[cfg(feature = "text-input")]
 use crate::widget::text_input_model::TextInputModel;
+#[cfg(feature = "toggle")]
 use crate::widget::toggle_model::{CheckState, CheckboxModel, RadioGroupModel, RadioOption};
 
+#[cfg(feature = "toggle")]
 impl From<CheckState> for Checked {
     /// Map the checkbox's own tri-state onto the projected one.
     ///
@@ -75,6 +90,7 @@ impl From<CheckState> for Checked {
     }
 }
 
+#[cfg(feature = "button")]
 /// Project a [`ButtonModel`] (`UIF-PRIN-008`).
 ///
 /// Carries `name` (absent for an icon-only button, which has no text to
@@ -93,6 +109,7 @@ pub fn project_button(model: &ButtonModel) -> A11yContract<'_> {
     }
 }
 
+#[cfg(feature = "toggle")]
 /// Project a [`CheckboxModel`] (`UIF-PRIN-008`).
 ///
 /// `checked` is tri-state here, so the `−` dash survives the projection
@@ -105,6 +122,7 @@ pub fn project_checkbox(model: &CheckboxModel) -> A11yContract<'_> {
         .disabled(model.disabled)
 }
 
+#[cfg(feature = "toggle")]
 /// Project one [`RadioOption`] against the group's current selection
 /// (`UIF-PRIN-008`).
 ///
@@ -125,6 +143,7 @@ pub fn project_radio_option<Id>(option: &RadioOption<Id>, selected: bool) -> A11
         .disabled(option.disabled)
 }
 
+#[cfg(feature = "toggle")]
 /// Project a [`RadioGroupModel`] as its container role (`UIF-PRIN-008`).
 ///
 /// Only `disabled` carries through. The group is not itself selectable,
@@ -136,6 +155,7 @@ pub fn project_radio_group<Id>(model: &RadioGroupModel<Id>) -> A11yContract<'_> 
     A11yContract::new(A11yRole::RadioGroup).disabled(model.disabled)
 }
 
+#[cfg(feature = "segmented")]
 /// Project a [`SegmentedModel`] as its container role (`UIF-PRIN-008`).
 ///
 /// The role follows the selection mode rather than the widget's name,
@@ -154,6 +174,7 @@ pub fn project_segmented<Id>(model: &SegmentedModel<Id>) -> A11yContract<'_> {
     A11yContract::new(role).disabled(model.disabled)
 }
 
+#[cfg(feature = "segmented")]
 /// Project one segment of a [`SegmentedModel`] (`UIF-PRIN-008`).
 ///
 /// The segment's role follows the parent's mode for the same reason the
@@ -182,6 +203,7 @@ where
     )
 }
 
+#[cfg(feature = "menu")]
 /// Project one menu [`Row`] (`UIF-PRIN-008`).
 ///
 /// The role follows [`RowKind`] exactly, including the two
@@ -212,6 +234,7 @@ pub fn project_menu_row(row: &Row) -> A11yContract<'_> {
     .disabled(row.is_disabled())
 }
 
+#[cfg(feature = "menu")]
 /// Project a menu [`Row`] with the cascade's expansion answer attached
 /// (`UIF-PRIN-008`).
 ///
@@ -230,6 +253,7 @@ pub fn project_menu_row_open(row: &Row, is_open: bool) -> A11yContract<'_> {
     }
 }
 
+#[cfg(feature = "menu")]
 /// The ARIA role a menu row's kind maps to.
 fn role_of_row(row: &Row) -> A11yRole {
     match row.kind() {
@@ -241,6 +265,7 @@ fn role_of_row(row: &Row) -> A11yRole {
     }
 }
 
+#[cfg(feature = "tree-view")]
 /// Project one visible tree [`VisibleRow`] (`UIF-PRIN-008`).
 ///
 /// `expanded` is reported only when the row is `expandable`. A leaf's
@@ -257,6 +282,7 @@ pub fn project_tree_row<Id>(row: &VisibleRow<Id>) -> A11yContract<'_> {
     }
 }
 
+#[cfg(feature = "chip")]
 /// Project a [`ChipModel`] (`UIF-PRIN-008`).
 ///
 /// `selected` carries the variant's own selection fact and `disabled`
@@ -272,6 +298,7 @@ pub fn project_chip<Id>(model: &ChipModel<Id>) -> A11yContract<'_> {
         .disabled(model.is_disabled())
 }
 
+#[cfg(feature = "text-input")]
 /// Project a [`TextInputModel`] (`UIF-PRIN-008`).
 ///
 /// Carries `value` (the live contents), `invalid` (read from the host's
@@ -291,6 +318,7 @@ pub fn project_text_input(model: &TextInputModel) -> A11yContract<'_> {
         .disabled(model.disabled)
 }
 
+#[cfg(feature = "button")]
 /// Project a [`ProgressModel`] (`UIF-PRIN-008`).
 ///
 /// `busy` is whether work is still moving — only `Active` counts, so a
@@ -313,6 +341,7 @@ pub fn project_progress(model: &ProgressModel) -> A11yContract<'_> {
     }
 }
 
+#[cfg(feature = "expander")]
 /// Project an expander's [`DisclosureToggle`] header (`UIF-PRIN-008`).
 ///
 /// `expanded` is the whole point of the control, so it is always
@@ -323,6 +352,7 @@ pub fn project_disclosure(toggle: &DisclosureToggle) -> A11yContract<'_> {
     A11yContract::new(A11yRole::Button).expanded(toggle.is_open())
 }
 
+#[cfg(feature = "tab-strip")]
 /// Project a [`TabItem`](crate::composite::tab_strip::TabItem) from a tab strip (`UIF-PRIN-008`).
 #[must_use]
 pub fn project_tab_item(
@@ -334,6 +364,7 @@ pub fn project_tab_item(
         .selected(is_active)
 }
 
+#[cfg(feature = "navigation-rail")]
 /// Project a [`NavDestination`](crate::composite::navigation_rail::NavDestination) from a navigation rail (`UIF-PRIN-008`).
 #[must_use]
 pub fn project_nav_rail_destination<DestId>(
@@ -346,6 +377,7 @@ pub fn project_nav_rail_destination<DestId>(
         .disabled(destination.disabled)
 }
 
+#[cfg(feature = "stepper")]
 /// Project a [`StepItem`](crate::composite::stepper::StepItem) from a stepper wizard (`UIF-PRIN-008`).
 #[must_use]
 pub fn project_stepper_step<StepId>(
@@ -358,6 +390,7 @@ pub fn project_stepper_step<StepId>(
         .disabled(step.disabled)
 }
 
+#[cfg(feature = "grid-view")]
 /// Project a [`GridTile`](crate::composite::grid_view::GridTile) from a grid view (`UIF-PRIN-008`).
 #[must_use]
 pub fn project_grid_tile<Id>(
@@ -370,6 +403,7 @@ pub fn project_grid_tile<Id>(
         .disabled(tile.disabled)
 }
 
+#[cfg(feature = "command-palette")]
 /// Project a [`PaletteItem`](crate::composite::command_palette::PaletteItem) from a command palette (`UIF-PRIN-008`).
 #[must_use]
 pub fn project_command_palette_item<ItemId>(
@@ -381,6 +415,6 @@ pub fn project_command_palette_item<ItemId>(
         .selected(is_selected)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "project_tests.rs"]
 mod project_tests;

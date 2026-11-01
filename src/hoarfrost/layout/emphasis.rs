@@ -50,7 +50,9 @@
 //!
 //! Unit tests live in the sibling `emphasis_tests.rs` sidecar.
 
+#[cfg(feature = "dialog")]
 use crate::surface::dialog_button::DialogButtonRole;
+#[cfg(feature = "button")]
 use crate::widget::button::ButtonVariant;
 
 /// How loudly a control paints, in the sense §1.1 pillar 6 counts
@@ -175,6 +177,7 @@ impl<'a> EmphasisSlot<'a> {
         }
     }
 
+    #[cfg(feature = "button")]
     /// The emphasis a [`ButtonVariant`] paints at.
     #[must_use]
     pub fn of_button_variant(name: &'a str, variant: ButtonVariant) -> Self {
@@ -184,6 +187,7 @@ impl<'a> EmphasisSlot<'a> {
         }
     }
 
+    #[cfg(feature = "dialog")]
     /// The emphasis a [`DialogButtonRole`] implies.
     ///
     /// Intent, not paint — see the module docs for the limit of what
@@ -197,6 +201,7 @@ impl<'a> EmphasisSlot<'a> {
     }
 }
 
+#[cfg(feature = "button")]
 impl From<ButtonVariant> for Emphasis {
     /// Map a button variant onto the emphasis the rule counts.
     ///
@@ -211,6 +216,7 @@ impl From<ButtonVariant> for Emphasis {
     }
 }
 
+#[cfg(feature = "dialog")]
 impl From<DialogButtonRole> for Emphasis {
     /// Map a dialog button role onto the emphasis the rule counts.
     ///
@@ -316,6 +322,6 @@ pub fn check_focal_point<'a>(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all"))]
 #[path = "emphasis_tests.rs"]
 mod emphasis_tests;
