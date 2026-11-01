@@ -1,8 +1,7 @@
 # hoarfrost
 
 A design system and widget framework for [iced](https://github.com/iced-rs/iced): desktop
-controls for panes, tabs, menus and dialogs, each implemented against a written
-specification whose `UIF-*` requirement IDs its own module cites in its doc comment.
+controls for panes, tabs, menus and dialogs
 
 ## What it is for
 
@@ -11,42 +10,29 @@ modal dialogs and a filesystem to navigate. The specification names nine core su
 its scope: main window, navbar, multiple panes, tabbed windows, input dialogs, modal
 dialogs, movable overlays, fixed menus and context menus.
 
-It assumes a high-density desktop: controls hold a compact 28–36px height against a
-mandatory 24×24px hit target, and every pointer operation has a deterministic keyboard
-path.
+## What it's not
+
+It's not a framework to deliver unlimited variations in designs. By it's very nature, it's opinionated.
 
 ## What you get
 
-**Your data stays yours.** Widgets read the model you own and cannot write it, so there is
-no second copy inside the framework quietly drifting out of sync with yours.
+**Consistency** Widgets all conform to the same design principles, style, size and layout.
 
-**Callbacks you cannot mix up.** A live tick, a final commit and a cancellation are three
-distinct types. Passing one where another is required is a compile error, and a gesture
-cannot be settled twice.
+**Modularity** Take only the parts you need.
 
-**An interface that does not jump.** Hover, focus, busy, disabled and validation changes
-never move anything on screen — the failure a desktop user feels constantly and cannot
-name.
-
-**Keyboard parity.** Every pointer operation has a deterministic keyboard path, and a large
-composite is a single tab stop rather than one press per row.
-
-**Scale by construction.** A million-row list builds only the rows on screen, and the bound
-does not depend on how many rows there are.
-
-**Regressions that read as text.** 6,188 tests assert resolved colours and measured
-geometry rather than comparing screenshots, so a failure names the token or the rectangle
-that moved instead of showing a picture that looks different.
-
-**Straight talk about gaps.** 89 of 92 requirements are implemented and 3 are recorded as
-partial, each naming what is missing.
+**Keyboard parity.** Every pointer operation has a deterministic keyboard path.
 
 **Small and clean.** Four dependencies, all of them iced. No `unsafe` blocks. MIT.
 
-## The design it holds itself to
+## Kudos
 
-Nine principles in `spec.md` are normative rather than aspirational, and each is written as
-something a widget can be checked against:
+- https://github.com/iced-rs/iced for the framework
+- https://github.com/anomalyco/opencode for the harness, and the generous free credits
+- https://github.com/peonist-ai/halogen-flash-server for saving my strix halo
+
+0.14.0 Design written by _google/gemini-4-argon_, reviewed by _zai-org/GLM-5.3_ and implemented by _Qwen/Qwen3.8-Flash-Next_.
+
+## Design principles
 
 | | Principle | What it rules out |
 |---|---|---|
@@ -69,9 +55,6 @@ something a widget can be checked against:
 | A command the user types | Command palette | Fixed menu | The palette is a modal overlay card at Escape Rank 2; a fixed menu is anchored to a navbar trigger |
 | Content is missing vs still arriving | Empty state / Skeleton | An empty panel | The empty state holds its height instead of collapsing to zero; the skeleton is the loading shimmer |
 | An explanation without a click | Tooltip | — | It opens on hover at 400ms and on keyboard focus at 0ms, so the keyboard path gets it too |
-
-Every image below is rendered by `hoarfrost-gallery` — one PNG per demo section, each card
-showing one widget across its states at 2× scale.
 
 ## Widgets
 
@@ -399,7 +382,3 @@ move rather than disappear when the window narrows.
 
 ---
 
-`hoarfrost` is not on crates.io yet, so add it from this repository.
-
-Regenerate the images with `cargo run -p hoarfrost-gallery -- <directory>`, and see every
-section live with `cargo run -p hoarfrost-demo`.

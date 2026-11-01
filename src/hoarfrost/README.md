@@ -120,5 +120,4 @@ the feature for the surface they want.
 The demo and gallery workspace crates enable `all` and `test-helpers` so they
 can render the complete showcase. For normal applications, select only the
 widget features you use. To confirm the current feature names and dependency
-relationships, see the `[features]` section of
-[`hoarfrost/Cargo.toml`](hoarfrost/Cargo.toml).
+relationships, see the `[features]` section of [`Cargo.toml`](Cargo.toml).
