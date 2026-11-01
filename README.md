@@ -1,10 +1,9 @@
 # hoarfrost
 
-A Windows 11-flavoured widget toolkit for [iced](https://github.com/iced-rs/iced), built
-against a written requirement set.
-
-Every image below is rendered by `hoarfrost-gallery`, one PNG per demo section, each card
-showing one widget across its states at 2× scale.
+A reusable [iced](https://github.com/iced-rs/iced) widget library implementing the UI
+framework specification in `src/hoarfrost/spec.md`. The `UIF-*` requirement IDs in that
+document map to the code, and every image below is rendered by `hoarfrost-gallery` — one
+PNG per demo section, each card showing one widget across its states at 2× scale.
 
 ## Widgets
 
