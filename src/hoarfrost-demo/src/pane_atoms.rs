@@ -934,14 +934,21 @@ fn range_model(lower: f64, upper: f64) -> RangeSliderModel {
 #[must_use]
 pub fn rating_section(state: &AtomsState) -> Section<'_> {
     let live = rating_control(state.rating.clone())
+        .id(iced::advanced::widget::Id::new("demo.atoms.rating.live"))
         .palette(Palette::dark())
         .on_commit(|commit| Message::Atoms(AtomsMessage::RatingPicked(*commit.value())));
 
-    let read_only =
-        rating_control(state.rating.clone().with_read_only(true)).palette(Palette::dark());
+    let read_only = rating_control(state.rating.clone().with_read_only(true))
+        .id(iced::advanced::widget::Id::new(
+            "demo.atoms.rating.read-only",
+        ))
+        .palette(Palette::dark());
 
-    let disabled =
-        rating_control(state.rating.clone().with_disabled(true)).palette(Palette::dark());
+    let disabled = rating_control(state.rating.clone().with_disabled(true))
+        .id(iced::advanced::widget::Id::new(
+            "demo.atoms.rating.disabled",
+        ))
+        .palette(Palette::dark());
 
     let rows = Column::new()
         .spacing(hoarfrost::token::space::XS)
@@ -1004,12 +1011,14 @@ pub fn avatar_section() -> Section<'static> {
 #[must_use]
 pub fn date_picker_section(state: &AtomsState) -> Section<'_> {
     let single = date_picker(state.date.clone())
+        .with_id("demo.atoms.date-picker.single")
         .with_today(data::date(data::TODAY))
         .with_palette(Palette::dark())
         .on_open_change(|live| Message::Atoms(AtomsMessage::DateFlyoutToggled(*live.value())))
         .on_commit(|commit| Message::Atoms(AtomsMessage::DatePicked(commit.value().clone())));
 
     let range = date_range_picker(state.date_range.clone())
+        .with_id("demo.atoms.date-picker.range")
         .with_today(data::date(data::TODAY))
         .with_palette(Palette::dark())
         .on_commit(|commit| Message::Atoms(AtomsMessage::DateRangePicked(commit.value().clone())));
@@ -1026,11 +1035,14 @@ pub fn date_picker_section(state: &AtomsState) -> Section<'_> {
 #[must_use]
 pub fn time_picker_section(state: &AtomsState) -> Section<'_> {
     let live = time_picker(state.time.clone())
+        .with_id("demo.atoms.time-picker.live")
         .palette(Palette::dark())
         .on_open_change(|live| Message::Atoms(AtomsMessage::TimeFlyoutToggled(*live.value())))
         .on_commit(|commit| Message::Atoms(AtomsMessage::TimePicked(*commit.value())));
 
-    let disabled = time_picker(state.time.clone().with_disabled(true)).palette(Palette::dark());
+    let disabled = time_picker(state.time.clone().with_disabled(true))
+        .with_id("demo.atoms.time-picker.disabled")
+        .palette(Palette::dark());
 
     let rows = Column::new()
         .spacing(hoarfrost::token::space::XS)
@@ -1044,10 +1056,12 @@ pub fn time_picker_section(state: &AtomsState) -> Section<'_> {
 #[must_use]
 pub fn color_picker_section(state: &AtomsState) -> Section<'_> {
     let picker = color_picker(state.color.clone())
+        .with_id("demo.atoms.colour-picker.live")
         .on_open_change(|live| Message::Atoms(AtomsMessage::ColorFlyoutToggled(*live.value())))
         .on_commit(|commit| Message::Atoms(AtomsMessage::ColorPicked(*commit.value())));
 
     let swatch = color_swatch_button(&state.color)
+        .with_id("demo.atoms.colour-swatch.trigger")
         .on_press(|| Message::Atoms(AtomsMessage::ColorFlyoutToggled(true)));
 
     let rows = Column::new()

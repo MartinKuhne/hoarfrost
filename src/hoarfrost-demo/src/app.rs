@@ -117,7 +117,7 @@ impl DemoApp {
     /// Folds one [`Message`] into the state.
     ///
     /// [`Message::Close`] is the only message with a real effect; every
-    /// other variant records its description in [`Self::last_event`] (and,
+    /// other variant records its description in `Self::last_event` (and,
     /// for the splitter, a new ratio).
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {

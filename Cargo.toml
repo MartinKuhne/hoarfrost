@@ -3,5 +3,6 @@ resolver = "2"
 members = [
     "src/hoarfrost",
     "src/hoarfrost-demo",
+    "src/hoarfrost-gallery",
 ]
 default-members = ["src/hoarfrost"]

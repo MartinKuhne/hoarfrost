@@ -1289,7 +1289,7 @@ impl Capture {
     /// so a caller can rasterise from the exact renderer these frames came
     /// out of without going through a [`Frame`].
     ///
-    /// [`Headless::screenshot`]: iced_core::renderer::Headless::screenshot
+    /// [`Headless::screenshot`]: iced::advanced::renderer::Headless::screenshot
     #[must_use]
     pub fn renderer_mut(&mut self) -> &mut HeadlessRenderer {
         &mut self.renderer

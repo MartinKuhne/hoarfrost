@@ -6,6 +6,17 @@ description = "A standalone runnable showcase of the hoarfrost UI framework"
 license = "MIT"
 publish = false
 
+# The showcase is a library first and a window second: the module graph lives
+# in `src/lib.rs` so a sibling crate can render the same sections headlessly,
+# and `src/main.rs` is a thin shell over it.
+[lib]
+name = "hoarfrost_demo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hoarfrost-demo"
+path = "src/main.rs"
+
 [dependencies]
 hoarfrost = { path = "../hoarfrost", features = ["test-helpers"] }
 # Feature set MUST match `hoarfrost`'s exactly (PLAN C3) or the re-exported

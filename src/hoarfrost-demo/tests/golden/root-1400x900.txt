@@ -1,5 +1,5 @@
 # viewport 1400.00 x 900.00
-# named 183 / anonymous 1823
+# named 189 / anonymous 1817
 demo.atoms.button.Danger.busy [focusable] | 280.00 192.00 88.00 32.00 | 280.00 192.00 88.00 32.00
 demo.atoms.button.Danger.live [focusable] | 88.00 192.00 88.00 32.00 | 88.00 192.00 88.00 32.00
 demo.atoms.button.Ghost.busy [focusable] | 280.00 156.00 88.00 32.00 | 280.00 156.00 88.00 32.00
@@ -23,6 +23,10 @@ demo.atoms.checkbox.2 [container] | 16.00 360.00 16.00 16.00 | 16.00 360.00 16.0
 demo.atoms.checkbox.2.label [text] | 40.00 356.00 103.38 24.00 | 40.00 356.00 103.38 24.00
 demo.atoms.checkbox.3 [container] | 16.00 388.00 16.00 16.00 | 16.00 388.00 16.00 16.00
 demo.atoms.checkbox.3.label [text] | 40.00 384.00 63.23 24.00 | 40.00 384.00 63.23 24.00
+demo.atoms.colour-picker.live [focusable] | 16.00 2480.00 240.00 32.00 | -
+demo.atoms.colour-swatch.trigger [focusable] | 16.00 2516.00 240.00 32.00 | -
+demo.atoms.date-picker.range [focusable] | 16.00 2228.00 256.00 32.00 | -
+demo.atoms.date-picker.single [focusable] | 16.00 2192.00 256.00 32.00 | -
 demo.atoms.link.external [focusable] | 16.00 984.00 94.37 24.00 | -
 demo.atoms.link.internal [focusable] | 16.00 956.00 92.14 24.00 | -
 demo.atoms.password.disabled [text_input] | 28.00 1406.00 607.00 20.00 | -
@@ -38,6 +42,7 @@ demo.atoms.radio.label-1 [text] | 139.17 484.00 89.62 24.00 | 139.17 484.00 89.6
 demo.atoms.radio.label-2 [text] | 264.78 484.00 65.06 24.00 | 264.78 484.00 65.06 24.00
 demo.atoms.range.live.lower [focusable] | 173.75 1952.00 24.00 24.00 | -
 demo.atoms.range.live.upper [focusable] | 335.50 1952.00 24.00 24.00 | -
+demo.atoms.rating.live [focusable] | 16.00 1796.00 136.00 24.00 | -
 demo.atoms.segmented [focusable] | 16.00 740.00 249.49 32.00 | 16.00 740.00 249.49 32.00
 demo.atoms.split.control [focusable] | 16.00 848.00 135.26 32.00 | 16.00 848.00 135.26 24.00
 demo.atoms.switch.busy [focusable] | 16.00 612.00 128.26 24.00 | 16.00 612.00 128.26 24.00
@@ -58,6 +63,7 @@ demo.atoms.text.live [text_input] | 28.00 1118.00 607.00 20.00 | -
 demo.atoms.text.live [focusable] | 28.00 1118.00 607.00 20.00 | -
 demo.atoms.text.readonly [text_input] | 28.00 1154.00 607.00 20.00 | -
 demo.atoms.text.readonly [focusable] | 28.00 1154.00 607.00 20.00 | -
+demo.atoms.time-picker.live [focusable] | 16.00 2336.00 220.00 32.00 | -
 demo.chrome.close [focusable] | 1341.92 2.00 58.08 32.00 | 1341.92 2.00 58.08 32.00
 demo.chrome.status_bar [container] | 0.00 872.00 1400.00 28.00 | 0.00 872.00 1400.00 28.00
 demo.composites.form.valid [focusable] | 721.00 3796.00 78.93 24.00 | -

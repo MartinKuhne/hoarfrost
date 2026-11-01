@@ -905,7 +905,7 @@ pub type OnCancel<'a, Message> = Box<dyn Fn(Cancel<DateSelection>) -> Message + 
 /// across rebuilds. A host with more than one picker on screen must give each
 /// one its own name through [`DatePicker::with_id`] — two controls sharing an
 /// id cannot be told apart by an id-addressed focus request.
-const DEFAULT_DATE_PICKER_ID: &str = "hoarfrost.date_picker";
+pub const DEFAULT_DATE_PICKER_ID: &str = "hoarfrost.date_picker";
 
 /// Interactive DatePicker & Calendar widget (§3.10, `UIF-ATOM-010`).
 pub struct DatePicker<'a, Message> {

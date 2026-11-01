@@ -676,7 +676,7 @@ pub type OnCancel<'a, Message> = Box<dyn Fn(Cancel<Option<CivilTime>>) -> Messag
 /// Stable by construction, so the router keeps addressing the same control
 /// across rebuilds. A host with more than one picker on screen must give each
 /// one its own name through [`TimePicker::with_id`].
-const DEFAULT_TIME_PICKER_ID: &str = "hoarfrost.time_picker";
+pub const DEFAULT_TIME_PICKER_ID: &str = "hoarfrost.time_picker";
 
 /// Interactive segmented TimePicker widget (§3.11, `UIF-ATOM-011`).
 pub struct TimePicker<'a, Message> {
