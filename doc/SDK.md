@@ -21,7 +21,7 @@ Machine-oriented reference for the `hoarfrost` crate, written for AI coding agen
 | Field | Value |
 |---|---|
 | Crate name | `hoarfrost` |
-| Version | `0.14.0` |
+| Version | `0.14.1` |
 | Edition | Rust 2024 |
 | License | MIT |
 | Repository | https://github.com/MartinKuhne/hoarfrost |
@@ -49,7 +49,7 @@ The `advanced` iced feature is **REQUIRED**. Without it, `iced::advanced` is `cf
 
 ```toml
 [dependencies]
-hoarfrost = "0.14.0"
+hoarfrost = "0.14.1"
 iced = { version = "0.14.0", features = [
     "wgpu", "tiny-skia", "fira-sans", "advanced-shaping", "advanced",
 ] }
