@@ -3,8 +3,8 @@
 //! An atom is the smallest thing in the interface that has a complete
 //! interaction state machine: it can rest, be hovered, be pressed, hold
 //! focus, be disabled and — where it carries a value — be invalid. §3 of
-//! `spec.md` at this crate's root specifies each atom as a matrix of
-//! those states, and this subsystem is where those matrices become code.
+//! the repository's `doc/spec.md` specifies each atom as a matrix of those
+//! states, and this subsystem is where those matrices become code.
 //!
 //! Each atom here has two halves, kept deliberately separate. The
 //! **resolver** is a pure function from `(variant, state, palette)` to a

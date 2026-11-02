@@ -1,5 +1,5 @@
-//! Machine-readable coverage of every `UIF-*` requirement in
-//! `spec.md` at this crate's root, plus the audit primitive that keeps
+//! Machine-readable coverage of every `UIF-*` requirement in the repository's
+//! `doc/spec.md`, plus the audit primitive that keeps
 //! that coverage from silently going stale.
 //!
 //! # Why a manifest instead of a document
