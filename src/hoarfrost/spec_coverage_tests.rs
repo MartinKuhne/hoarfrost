@@ -4,8 +4,8 @@
 //! duplicates, the three-way partition, and that a `Partial` or `NotOwned`
 //! entry actually says something rather than gesturing.
 //!
-//! The second group is the reason the ledger exists. It reads
-//! `spec.md` at this crate's root at test time, extracts every numbered
+//! The second group is the reason the ledger exists. It reads the repository's
+//! `doc/spec.md` at test time, extracts every numbered
 //! `UIF-*` id and asserts the ledger and the spec agree **in both
 //! directions**, so an ID added to the spec without a classification here
 //! fails the build, and a manifest entry the spec no longer contains fails
@@ -25,25 +25,34 @@ use crate::spec_coverage::{
     manifest, not_owned, parent_id, partial, render, render_table, status_of, unimplemented,
 };
 
-/// The spec file, resolved from the crate directory.
+/// The spec file, resolved from the repository root.
 ///
-/// The spec lives **inside** this crate as `spec.md`, so it resolves with no
-/// traversal at all. That is a change of state, not a preference: the spec
-/// used to sit at `doc/planning/ui-framework.md` and be read from two
-/// directories up, and commit `edbe04a` moved it here. Nothing else in the
-/// crate was repointed at the time, which is why this function is the only
-/// functional breakage that move caused.
+/// The spec is kept at `doc/spec.md` in the repository so Cargo does not ship
+/// it with the crate. Tests run from a repository checkout resolve it relative
+/// to the crate manifest directory; a packaged crate intentionally has no copy.
 ///
 /// The file is read-only as far as this crate is concerned and in-repo — no
 /// user path is touched (RUST-006).
 fn spec_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("spec.md")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../doc/spec.md")
 }
 
-fn spec_text() -> String {
+fn spec_text() -> Option<String> {
     let path = spec_path();
-    std::fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("cannot read the spec at {}: {error}", path.display()))
+    match std::fs::read_to_string(&path) {
+        Ok(text) => Some(text),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            let workspace_manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml");
+            assert!(
+                !workspace_manifest.is_file(),
+                "repository checkout is missing the spec at {}",
+                path.display(),
+            );
+            // The published crate intentionally omits the repository-level spec.
+            None
+        }
+        Err(error) => panic!("cannot read the spec at {}: {error}", path.display()),
+    }
 }
 
 /// A `Partial` reason must name what is missing, not gesture at it. These
@@ -354,7 +363,10 @@ fn test_parent_id_and_is_suffixed_id_agree() {
 fn test_a_suffixed_id_in_the_spec_must_be_classified_on_its_own() {
     // Mirrors the UIF-FAKE-999 pattern: an unclassified suffixed id has to fire
     // the audit by name, and must not be excused by its parent being classified.
-    let mut ids = extract_spec_ids(&spec_text());
+    let Some(text) = spec_text() else {
+        return;
+    };
+    let mut ids = extract_spec_ids(&text);
     assert!(
         !ids.iter().any(|id| id == "UIF-ATOM-002z"),
         "UIF-ATOM-002z must not already be a real requirement",
@@ -379,7 +391,10 @@ fn test_no_suffixed_requirement_collapses_onto_its_parent_entry() {
     // `UIF-ATOM-002` was reported `Implemented` while `002c`, `002d` and `002e`
     // went unbuilt and unclassified. Every suffixed id the spec carries must have
     // its own entry, distinct from whatever its parent says.
-    let spec_ids = extract_spec_ids(&spec_text());
+    let Some(text) = spec_text() else {
+        return;
+    };
+    let spec_ids = extract_spec_ids(&text);
     let suffixed: Vec<&str> = spec_ids
         .iter()
         .map(String::as_str)
@@ -447,7 +462,10 @@ fn test_extract_deduplicates_across_a_repeated_id() {
 
 #[test]
 fn test_the_real_spec_carries_the_expected_number_of_ids() {
-    let ids = extract_spec_ids(&spec_text());
+    let Some(text) = spec_text() else {
+        return;
+    };
+    let ids = extract_spec_ids(&text);
     assert_eq!(
         ids.len(),
         EXPECTED_SPEC_ID_COUNT,
@@ -459,7 +477,9 @@ fn test_the_real_spec_carries_the_expected_number_of_ids() {
 
 #[test]
 fn test_family_wildcards_in_the_spec_are_not_counted_as_requirements() {
-    let text = spec_text();
+    let Some(text) = spec_text() else {
+        return;
+    };
     let ids = extract_spec_ids(&text);
     assert!(
         text.contains("UIF-ZORD-*"),
@@ -477,7 +497,10 @@ fn test_family_wildcards_in_the_spec_are_not_counted_as_requirements() {
 
 #[test]
 fn test_the_ledger_is_clean_against_the_real_spec() {
-    let ids = extract_spec_ids(&spec_text());
+    let Some(text) = spec_text() else {
+        return;
+    };
+    let ids = extract_spec_ids(&text);
     let report = audit(&ids);
     assert!(
         report.is_clean(),
@@ -491,7 +514,10 @@ fn test_audit_fires_on_an_unclassified_id() {
     // The real read, the real comparison, one injected requirement. This is
     // the guard observed firing: an ID in the spec that nothing classifies
     // must come back as missing, and the report must name it.
-    let mut ids = extract_spec_ids(&spec_text());
+    let Some(text) = spec_text() else {
+        return;
+    };
+    let mut ids = extract_spec_ids(&text);
     let before = ids.len();
     ids.push("UIF-FAKE-999".to_string());
 
@@ -516,7 +542,10 @@ fn test_audit_fires_on_a_stale_ledger_entry() {
     // Drop one real requirement from the spec side: the ledger entry that
     // no longer corresponds to anything must surface as stale rather than
     // silently shrinking the ledger.
-    let ids: Vec<String> = extract_spec_ids(&spec_text())
+    let Some(text) = spec_text() else {
+        return;
+    };
+    let ids: Vec<String> = extract_spec_ids(&text)
         .into_iter()
         .filter(|id| id != "UIF-TOK-006")
         .collect();

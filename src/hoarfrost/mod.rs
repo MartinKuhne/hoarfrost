@@ -1,10 +1,10 @@
 //! A reusable iced widget library implementing the UI framework
 //! specification.
 //!
-//! This crate realises the design specification in
-//! `spec.md` at this crate's root. Requirement IDs of the form `UIF-*` in that
-//! document map to the code in this crate; each module cites the IDs it
-//! implements in its doc comments.
+//! This crate realises the design specification in the repository's
+//! `doc/spec.md`. Requirement IDs of the form `UIF-*` in that document map to
+//! the code in this crate; each module cites the IDs it implements in its doc
+//! comments.
 //!
 //! The core rule is Perceptual Harmony Through Tokenization (`UIF-PRIN-001`):
 //! every visual property — colour, elevation, spacing, sizing, border radius,

@@ -4,8 +4,8 @@
 //! ([`crate::widget`]) owns an interaction state machine for one control;
 //! a composite owns the *relationship between* controls and the text that
 //! explains them — the vertical rhythm of a labelled field, the horizontal
-//! split of a settings row, the three slots of a list tile. §3B of
-//! `spec.md` at this crate's root specifies those relationships, and this
+//! split of a settings row, the three slots of a list tile. §3B of the
+//! repository's `doc/spec.md` specifies those relationships, and this
 //! subsystem is where they become code.
 //!
 //! The same split that runs through [`crate::widget`] runs through here, and

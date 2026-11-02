@@ -3,6 +3,7 @@ name = "hoarfrost"
 version = "0.14.0"
 edition = "2024"
 description = "A design system and widget framework built on Iced"
+readme = "README.md"
 license = "MIT"
 repository = "https://github.com/MartinKuhne/hoarfrost"
 categories = ["gui"]
@@ -249,3 +250,5 @@ iced_runtime = "0.14.0"
 # enters the published graph, so it costs a consumer nothing.
 iced_test = "0.14.0"
 proptest = "1.4"
+
+
