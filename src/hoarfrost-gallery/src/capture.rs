@@ -30,9 +30,9 @@
 //!
 //! # One renderer for the whole run
 //!
-//! Building iced's headless renderer costs roughly 620 ms. A sweep of fifty
-//! sections would spend half a minute in renderer construction alone if it
-//! built one per section, so [`Renderer`] pays that cost once and reuses it.
+//! A sweep builds one [`Renderer`] and drives every section of the catalog
+//! through it rather than constructing one per section, so a run draws the
+//! whole catalog with a single renderer.
 //!
 //! # Failure is reported, never papered over
 //!

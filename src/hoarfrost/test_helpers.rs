@@ -88,13 +88,15 @@
 //! frames disagree on ([`Frame::differing_pixels`], asserted by
 //! [`assert_repainted`]).
 //!
-//! Building that renderer costs roughly 620 ms in a debug build, so a test
-//! that renders more than one frame goes through [`Capture`] rather than
-//! minting a renderer per assertion. A session is **owned** by the test
-//! that builds it and dropped with it. `cargo nextest` runs every test in
-//! its own process, so a session could never be reused across tests in the
-//! first place; there is nothing to amortise, and therefore no reason for
-//! one to outlive the test that paid for it.
+//! The renderer is built on the CPU backend named by [`HEADLESS_BACKEND`],
+//! which makes construction roughly 0.3 ms instead of the ~937 ms a wgpu
+//! adapter-and-device handshake costs. A test that renders more than one frame
+//! still goes through [`Capture`] rather than minting a renderer per assertion,
+//! because reusing one session is what keeps several frames comparable. A
+//! session is **owned** by the test that builds it and dropped with it.
+//! `cargo nextest` runs every test in its own process, so a session could never
+//! be reused across tests in the first place; there is nothing to amortise, and
+//! therefore no reason for one to outlive the test that built it.
 //!
 //! # Shipping to other crates
 //!
@@ -444,7 +446,7 @@ impl<'a, Message: Send + 'static> Harness<'a, Message, HeadlessRenderer> {
         let renderer = block_on(<HeadlessRenderer as renderer::Headless>::new(
             Font::with_name("Fira Sans"),
             Pixels(16.0),
-            None,
+            Some(HEADLESS_BACKEND),
         ))
         .expect("a headless renderer should be available for hoarfrost widget tests");
 
@@ -936,6 +938,20 @@ pub const PIXEL_SCALE: f32 = 2.0;
 /// text colour it resolves, so a background never reads as a glyph.
 pub const INK_THRESHOLD: u32 = 90;
 
+/// The rendering backend every headless test in this workspace asks for.
+///
+/// `iced_renderer::Renderer` is a fallback pair, and with no backend named it
+/// tries `iced_wgpu` first: a fresh `wgpu::Instance`, an adapter request and a
+/// device request on **every** construction. That costs roughly 937 ms in a
+/// debug build against a per-frame raster of about 1 ms, so the GPU handshake
+/// was over 99% of what a capture session paid.
+///
+/// Naming `tiny-skia` makes the construction a plain struct build (~0.3 ms) and
+/// pins the raster path to the CPU. That also makes the pixels a property of the
+/// code rather than of whichever adapter the machine happened to expose, which
+/// is what a suite asserting on ink and differing-pixel counts needs.
+pub const HEADLESS_BACKEND: &str = "tiny-skia";
+
 /// A headless renderer built the way every paint-level test wants it.
 ///
 /// Split out from [`Harness::headless`] so a test that needs raw pixels
@@ -945,7 +961,7 @@ pub fn headless_renderer() -> HeadlessRenderer {
     block_on(<HeadlessRenderer as renderer::Headless>::new(
         Font::with_name("Fira Sans"),
         Pixels(16.0),
-        None,
+        Some(HEADLESS_BACKEND),
     ))
     .expect("a headless renderer should be available for hoarfrost widget tests")
 }
@@ -1077,8 +1093,9 @@ const CAPTURE_BACKGROUND: Color = Color::BLACK;
 
 /// A headless capture session: one renderer, many frames.
 ///
-/// Building iced's headless renderer costs roughly 620 ms in a debug
-/// build — more than a layout pass and a raster together — so a test that
+/// On the CPU backend named by [`HEADLESS_BACKEND`] construction is cheap
+/// (~0.3 ms), so this is no longer about avoiding an expensive handshake - it
+/// is about keeping a test's frames coming out of one renderer. A test that
 /// renders more than one frame should mint the renderer once and drive it
 /// through here. [`screenshot`] is the one-frame shorthand; this is the
 /// many-frame form.
@@ -1276,8 +1293,9 @@ impl Capture {
     ///
     /// A probe that wants renderer-level reads alongside its frames takes
     /// them from here. Building a second headless renderer to measure text
-    /// next to a captured frame costs the ~620 ms build again and, worse,
-    /// measures a renderer that is not the one that drew the picture.
+    /// next to a captured frame measures a renderer that is not the one that
+    /// drew the picture - and on the CPU backend that second build is cheap
+    /// enough that cost alone is no reason to reach for it.
     #[must_use]
     pub fn renderer(&self) -> &HeadlessRenderer {
         &self.renderer

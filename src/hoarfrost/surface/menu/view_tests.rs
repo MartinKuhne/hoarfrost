@@ -11,8 +11,8 @@
 //! 3. **The widget.** Layout, paint layers, focus registration and
 //!    pointer behaviour, driven through the real iced tree.
 //!
-//! Minting iced's headless renderer costs roughly 620 ms, so the widget leg
-//! shares sessions: a group of claims takes **one** [`Harness`] (or one
+//! The widget leg shares sessions rather than taking one per claim: a group
+//! of claims takes **one** [`Harness`] (or one
 //! [`Capture`] for the repaint probes) and swaps the row under test with
 //! [`Harness::set_view`]. Each case mounts its row under its own focus id,
 //! which is what keeps the carried widget state — hover, press, focus — from
@@ -1259,9 +1259,9 @@ fn test_the_two_focused_cells_paint_as_the_spec_matrix_states() {
 
 /// One headless session, shared by a group of claims.
 ///
-/// Minting iced's headless renderer costs roughly 620 ms, so the widget-leg
-/// claims share a session and swap the row under test with
-/// [`Harness::set_view`] rather than paying a build each. Every case mounts
+/// The widget-leg claims share a session and swap the row under test with
+/// [`Harness::set_view`] rather than each building a renderer of its own.
+/// Every case mounts
 /// its row under its own focus id (see [`mount_row`]), which is what keeps
 /// the carried widget state — hover, press, focus — from crossing from one
 /// case into the next.

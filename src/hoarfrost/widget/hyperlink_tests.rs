@@ -16,8 +16,7 @@
 //!    polarity.
 //!
 //! A sixth group drives the live iced `Hyperlink` through the real tree.
-//! Because a headless harness pays roughly 600 ms to build iced's renderer,
-//! the cases inside one claim share a single session through
+//! The cases inside one claim share a single session through
 //! [`Harness::set_view`], each under its own focus id so no case can inherit
 //! another's hover, press or focus state. Every claim still runs: a table-driven
 //! group checks each of its cells on every pass, so what drops is the number of
@@ -383,11 +382,9 @@ fn assert_ratio(actual: f32, quoted: f32, what: &str) {
 
 use crate::binding::Controlled;
 use crate::test_helpers::{Harness, Theme, centre, focus_one};
-use iced::Font;
 use iced::keyboard::Location;
 use iced::keyboard::Modifiers;
 use iced::keyboard::key::{Key, Named};
-use iced_test::futures::futures::executor::block_on;
 use iced_test::renderer::Renderer as HeadlessRenderer;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -715,12 +712,7 @@ fn test_mouse_interaction_pointer_when_enabled() {
     let bounds = widget_bounds(&mut harness);
     let over = centre(bounds);
 
-    let renderer = block_on(<HeadlessRenderer as renderer::Headless>::new(
-        Font::with_name("Fira Sans"),
-        Pixels(16.0),
-        None,
-    ))
-    .unwrap();
+    let renderer = crate::test_helpers::headless_renderer();
 
     let mut link =
         Hyperlink::<TestMsg>::standalone("Pointer", "https://example.com", "link_ptr", |_| None);

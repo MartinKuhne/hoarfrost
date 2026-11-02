@@ -2,12 +2,12 @@
 //!
 //! # Cost, and what that dictates about the shape of these tests
 //!
-//! Building iced's headless renderer costs roughly 620 ms and every section costs
-//! a layout pass plus a raster pass. `cargo nextest` runs each test in its own
-//! process, so a renderer cannot be shared *between* tests — therefore the whole
-//! catalog is swept inside **one** test, through **one** renderer, rather than
-//! one test per section. The cheaper tests here use `--filter`-style filtering to
-//! touch a handful of sections instead of all of them.
+//! Every section costs a layout pass plus a raster pass. `cargo nextest` runs
+//! each test in its own process, so a renderer cannot be shared *between*
+//! tests — therefore the whole catalog is swept inside **one** test, through
+//! **one** renderer, rather than one test per section. The cheaper tests here
+//! use `--filter`-style filtering to touch a handful of sections instead of
+//! all of them.
 //!
 //! Every file written here goes into a `tempfile::TempDir` (**RUST-006**).
 

@@ -14,10 +14,9 @@
 //! scrollable is iced's own, because the point is that a widget shipped by
 //! somebody else now reaches the recorder.
 //!
-//! Building iced's headless renderer costs roughly 620 ms, so every claim
-//! that only needs a picture shares **one** [`Capture`] per group and reads
-//! several frames out of it, and every claim that only needs the operation
-//! stream shares one [`Harness`] and swaps the tree with
+//! Every claim that only needs a picture shares **one** [`Capture`] per group
+//! and reads several frames out of it, and every claim that only needs the
+//! operation stream shares one [`Harness`] and swaps the tree with
 //! [`Harness::set_view`]. Frames do not share widget state and the candidate
 //! recorder is a pure read, so nothing a case observes can come from the case
 //! before it. The assertions themselves are unchanged in number and in kind;
@@ -34,6 +33,7 @@ use crate::test_helpers::Blank;
 use crate::test_helpers::Capture;
 use crate::test_helpers::El;
 use crate::test_helpers::Frame;
+use crate::test_helpers::HEADLESS_BACKEND;
 use crate::test_helpers::Harness;
 use crate::test_helpers::INK_THRESHOLD;
 use crate::test_helpers::KIND_CUSTOM;
@@ -45,6 +45,7 @@ use crate::test_helpers::PIXEL_SCALE;
 use crate::test_helpers::SURFACE_TOLERANCE;
 use crate::test_helpers::assert_panics;
 use crate::test_helpers::assert_repainted;
+use crate::test_helpers::headless_renderer;
 use crate::test_helpers::iced_id;
 use crate::test_helpers::moved;
 use crate::test_helpers::panic_text;
@@ -1204,5 +1205,24 @@ fn test_the_panic_reader_and_its_guard_hold_in_both_directions() {
     assert!(
         panic_text(&guard).contains("a guard over a quiet closure"),
         "the guard's own failure must name what it was guarding"
+    );
+}
+
+/// The headless renderer must be built on the backend the suite pins.
+///
+/// The pin is what makes construction a plain struct build instead of a GPU
+/// adapter-and-device handshake, and it is what makes captured pixels a
+/// property of the code rather than of whichever adapter the machine happens
+/// to expose. A silent fallback to the GPU path would leave every rendering
+/// assertion green while quietly changing what each of them costs.
+#[test]
+fn the_headless_renderer_uses_the_pinned_backend() {
+    let renderer = headless_renderer();
+
+    assert_eq!(
+        renderer.name(),
+        HEADLESS_BACKEND,
+        "the suite must raster on the pinned CPU backend, not on whatever adapter \
+         the machine happens to expose"
     );
 }

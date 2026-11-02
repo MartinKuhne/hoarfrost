@@ -354,7 +354,7 @@ pub fn headless_renderer() -> HeadlessRenderer {
     block_on(<HeadlessRenderer as renderer::Headless>::new(
         Font::with_name(PROBE_FONT),
         Pixels(16.0),
-        None,
+        Some(hoarfrost::test_helpers::HEADLESS_BACKEND),
     ))
     .expect("a headless renderer should be available for demo layout probes")
 }
