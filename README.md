@@ -3,6 +3,8 @@
 A design system and widget framework for [iced](https://github.com/iced-rs/iced): desktop
 controls for panes, tabs, menus and dialogs
 
+AI agents MUST read the [implementation guide](doc/SDK.md).
+
 ## What it is for
 
 Desktop productivity applications — the kind with panes, tabs, a navbar, context menus,
