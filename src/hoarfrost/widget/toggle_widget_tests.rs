@@ -3,9 +3,8 @@
 //!
 //! # Why the cases are grouped
 //!
-//! Every renderer-backed case used to build its own headless renderer, and a
-//! renderer costs more than everything else in such a test put together
-//! (~620 ms of wgpu setup against ~0.1 s of process). The cases are therefore
+//! Every renderer-backed case used to build its own headless renderer. The
+//! cases are therefore
 //! grouped **by control and by claim**: one renderer per control family per
 //! group, with the tree swapped through [`Harness::set_view`] instead of a
 //! second harness. Nothing was dropped to get there — each case below is

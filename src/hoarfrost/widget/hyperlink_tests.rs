@@ -16,8 +16,7 @@
 //!    polarity.
 //!
 //! A sixth group drives the live iced `Hyperlink` through the real tree.
-//! Because a headless harness pays roughly 600 ms to build iced's renderer,
-//! the cases inside one claim share a single session through
+//! The cases inside one claim share a single session through
 //! [`Harness::set_view`], each under its own focus id so no case can inherit
 //! another's hover, press or focus state. Every claim still runs: a table-driven
 //! group checks each of its cells on every pass, so what drops is the number of

@@ -10,11 +10,10 @@
 //!
 //! # Cost
 //!
-//! Building iced's headless renderer takes roughly 620 ms, and `cargo nextest`
-//! runs every test in its own process, so a renderer cannot be shared *between*
-//! tests. Each test that needs one therefore builds exactly one and runs every
-//! raster assertion through it; everything else here is pure arithmetic and runs
-//! for free.
+//! `cargo nextest` runs every test in its own process, so a renderer cannot be
+//! shared *between* tests. Each test that needs one therefore builds exactly
+//! one and runs every raster assertion through it; everything else here is
+//! pure arithmetic and runs for free.
 //!
 //! No test writes to the filesystem (**RUST-006**).
 

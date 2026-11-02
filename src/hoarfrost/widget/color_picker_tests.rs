@@ -2,12 +2,10 @@
 //!
 //! # Why the cases are grouped
 //!
-//! Every headless harness pays roughly 620 ms to build iced's renderer and
-//! another ~100 ms to be spawned as its own test process, so the file used to
-//! spend most of CI on scaffolding rather than on assertions. Cases that
-//! observe the same fixture are therefore grouped into one `#[test]`, each case
-//! labelled in its own failure message, and the read-only fixtures share a
-//! single harness through [`Harness::set_view`].
+//! Cases that observe the same fixture are grouped into one `#[test]`, each
+//! case labelled in its own failure message, and the read-only fixtures share a
+//! single harness through [`Harness::set_view`] rather than each paying for a
+//! harness of its own.
 //!
 //! The grouping stops where widget state begins. `ColorPicker` and
 //! `ColorSwatchButton` keep their interaction state in the iced `Tree`
@@ -1262,8 +1260,8 @@ fn test_flyout_layout_rows_and_footer() {
 /// Every state the picker and the swatch button can be drawn in, through one
 /// harness.
 ///
-/// The nine states used to be nine harnesses, and each harness pays roughly
-/// 620 ms to build iced's headless renderer. `set_view` is the harness's own
+/// The nine states used to be nine harnesses, each building a headless
+/// renderer of its own. `set_view` is the harness's own
 /// way of swapping the tree underneath a live session, so one renderer now
 /// draws all nine frames for the price of one.
 ///

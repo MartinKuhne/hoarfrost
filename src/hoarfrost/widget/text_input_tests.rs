@@ -28,11 +28,10 @@
 //!
 //! # Tests share a renderer, never a widget tree
 //!
-//! Building iced's headless renderer costs roughly 620 ms, which dwarfs the
-//! layout pass a read-back actually performs, so [`LayoutProbe`] pays that
-//! cost once per test and rebuilds each configuration over a **fresh**
-//! [`user_interface::Cache`] — the same drive [`Host`] uses, with the cache
-//! reset instead of carried. A "this change must not move the editor" claim
+//! [`LayoutProbe`] builds one renderer per test and rebuilds each configuration
+//! over a **fresh** [`user_interface::Cache`] — the same drive [`Host`] uses,
+//! with the cache reset instead of carried. A "this change must not move the
+//! editor" claim
 //! is only worth making if neither configuration ever saw the other's tree,
 //! so sharing is limited to the renderer. Tests that press, type or focus
 //! still own a [`Harness`] or a [`Host`] to themselves, because for those the
@@ -1017,11 +1016,9 @@ fn outer(width: f32, height: f32) -> Rectangle {
 
 /// One headless renderer, many independent passes over it.
 ///
-/// Building iced's headless renderer is the dominant cost of this file — it
-/// is roughly 620 ms in a debug build, far more than the layout pass a probe
-/// actually performs. `Harness::headless` mints one per call, so a test that
-/// compares three configurations paid for three renderers to read three
-/// rectangles.
+/// `Harness::headless` mints a renderer per call, so a test that compares
+/// three configurations would pay for three renderers to read three
+/// rectangles. This builds one and drives every pass through it.
 ///
 /// What a probe needs to keep independent is the **widget state**, not the
 /// renderer: a "this change must not move the editor" claim is only worth

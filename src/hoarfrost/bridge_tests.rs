@@ -4,8 +4,8 @@
 //!
 //! # One session, many cases
 //!
-//! A headless harness pays roughly 600 ms to build iced's renderer, so the
-//! projection, tab and refusal legs each drive **one** session over several
+//! A headless harness builds a renderer of its own, so the projection, tab and
+//! refusal legs each drive **one** session over several cases instead of
 //! cases instead of building one session per case. Every case registers its
 //! widgets under its own namespaced focus ids ([`scoped`]), so no case can
 //! observe another case's router state: each still sees freshly registered,

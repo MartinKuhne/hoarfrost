@@ -14,10 +14,9 @@
 //! scrollable is iced's own, because the point is that a widget shipped by
 //! somebody else now reaches the recorder.
 //!
-//! Building iced's headless renderer costs roughly 620 ms, so every claim
-//! that only needs a picture shares **one** [`Capture`] per group and reads
-//! several frames out of it, and every claim that only needs the operation
-//! stream shares one [`Harness`] and swaps the tree with
+//! Every claim that only needs a picture shares **one** [`Capture`] per group
+//! and reads several frames out of it, and every claim that only needs the
+//! operation stream shares one [`Harness`] and swaps the tree with
 //! [`Harness::set_view`]. Frames do not share widget state and the candidate
 //! recorder is a pure read, so nothing a case observes can come from the case
 //! before it. The assertions themselves are unchanged in number and in kind;

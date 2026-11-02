@@ -431,10 +431,9 @@ fn the_button_paints_through_a_real_renderer_in_every_state() {
     // the claim.
     //
     // One `Capture` for the whole matrix rather than a `Harness::headless`
-    // per cell. Each `headless` mints its own renderer at roughly 620 ms,
-    // so 20 cells cost ~10.6 s of pure setup against a total of ~32 ms of
-    // actual drawing; the capture pays that setup once and drives every
-    // cell through the same renderer.
+    // per cell. Each `headless` mints its own renderer, so 20 cells would
+    // build 20 renderers to do the work of one; the capture builds one and
+    // drives every cell through the same renderer.
     let mut capture = Capture::new();
     let mut painted: Vec<String> = Vec::new();
     for variant in VARIANTS {
