@@ -29,7 +29,7 @@
 use std::collections::BTreeSet;
 
 use iced::widget::Column;
-use iced::{Border, Color, Element, Length, Shadow};
+use iced::{Border, Element, Length, Shadow};
 
 use hoarfrost::composite::code_block::{CodeBlock, CodeBlockModel};
 use hoarfrost::composite::command_palette::{CommandPalette, CommandPaletteModel};
@@ -48,9 +48,7 @@ use hoarfrost::composite::stepper::{
     StepItem, StepStatus, Stepper, StepperModel, StepperOrientation, WizardFooterConfig,
     wizard_footer,
 };
-use hoarfrost::composite::tab_strip::{
-    TabCloseVerdict, TabItem, TabStrip, TabStripModel, tab_context_menu,
-};
+use hoarfrost::composite::tab_strip::{TabCloseVerdict, TabItem, TabStrip, TabStripModel};
 use hoarfrost::surface::menu::model::Menu;
 use hoarfrost::surface::menu::view::MenuRow;
 use hoarfrost::token::color::Palette;
@@ -1015,113 +1013,6 @@ fn dirty_close_guard_card<'a>(id: &str, palette: Palette) -> Element<'a, Message
         .into()
 }
 
-/// Tab context menu card displaying standardized tab actions (`UIF-TAB-001`, §4.9.1).
-fn tab_context_menu_card<'a>(target_id: &str, palette: Palette) -> Element<'a, Message> {
-    let header_title = crate::section::rung(
-        format!("Context Menu: {target_id}"),
-        typography::TITLE_SM,
-        palette.text_strong,
-    );
-
-    let dismiss_btn = action_button(
-        LABEL_DISMISS,
-        Message::Composites(CompositesMessage::TabMenuDismissed),
-        palette,
-        false,
-    );
-
-    let header_row = iced::widget::Row::new()
-        .spacing(space::SM)
-        .align_y(iced::Alignment::Center)
-        .push(header_title)
-        .push(iced::widget::Space::new().width(Length::Fill))
-        .push(dismiss_btn);
-
-    let menu = tab_context_menu(target_id);
-    let mut menu_column = Column::new().spacing(space::XXS);
-
-    for row in menu.rows() {
-        let key = row.key().to_string();
-        if row.is_separator() {
-            let sep = iced::widget::container(iced::widget::Space::new())
-                .height(Length::Fixed(shape::BORDER_HAIRLINE))
-                .width(Length::Fill)
-                .style(move |_theme| iced::widget::container::Style {
-                    background: Some(palette.border_subtle.into()),
-                    ..Default::default()
-                });
-            menu_column = menu_column.push(sep);
-        } else {
-            let action_key = key.clone();
-            let tid = target_id.to_string();
-            let label = row.label().to_string();
-            let is_destructive = row.is_destructive();
-
-            let btn = iced::widget::button(crate::section::rung(
-                label,
-                typography::BODY,
-                if is_destructive {
-                    palette.status_danger_text
-                } else {
-                    palette.text_primary
-                },
-            ))
-            .on_press(Message::Composites(CompositesMessage::TabMenuAction(
-                action_key, tid,
-            )))
-            .width(Length::Fill)
-            .padding(
-                iced::Padding::new(0.0)
-                    .horizontal(space::SM)
-                    .vertical(space::XXS),
-            )
-            .style(move |_theme, status| {
-                let is_hovered = matches!(status, iced::widget::button::Status::Hovered);
-                let (bg, text_color) = if is_destructive {
-                    if is_hovered {
-                        (palette.status_danger_fill, palette.text_strong)
-                    } else {
-                        (Color::TRANSPARENT, palette.status_danger_text)
-                    }
-                } else if is_hovered {
-                    (palette.surface_hover, palette.text_strong)
-                } else {
-                    (Color::TRANSPARENT, palette.text_primary)
-                };
-
-                iced::widget::button::Style {
-                    background: Some(bg.into()),
-                    text_color,
-                    border: Border::default().rounded(shape::RADIUS_WIDGET),
-                    shadow: Shadow::default(),
-                    snap: true,
-                }
-            });
-            menu_column = menu_column.push(btn);
-        }
-    }
-
-    let card_content = Column::new()
-        .spacing(space::XS)
-        .push(header_row)
-        .push(menu_column);
-
-    iced::widget::container(card_content)
-        .width(Length::Fill)
-        .padding(space::SM)
-        .style(move |_theme| iced::widget::container::Style {
-            background: Some(palette.surface_raised.into()),
-            border: Border::default()
-                .color(palette.border_strong)
-                .width(shape::BORDER_HAIRLINE)
-                .rounded(shape::RADIUS_CARD),
-            shadow: Shadow::default(),
-            snap: true,
-            text_color: Some(palette.text_primary),
-        })
-        .into()
-}
-
 /// Scenario action toolbar for tab overflow, deletion and reset demonstrations (`UIF-TAB-002`, `UIF-TAB-003`).
 fn scenario_toolbar<'a>(palette: Palette) -> Element<'a, Message> {
     let add_btn = action_button(
@@ -1170,10 +1061,6 @@ pub fn tab_strip_section(state: &CompositesState) -> Section<'_> {
 
     if let Some(ref pending_id) = state.pending_close {
         body = body.push(dirty_close_guard_card(pending_id, palette));
-    }
-
-    if let Some(ref target_id) = state.tab_context_menu_target {
-        body = body.push(tab_context_menu_card(target_id, palette));
     }
 
     body = body.push(scenario_toolbar(palette));

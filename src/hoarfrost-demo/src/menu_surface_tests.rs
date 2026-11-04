@@ -7,7 +7,7 @@
 
 use std::collections::BTreeSet;
 
-use iced::{Point, Rectangle};
+use iced::{Point, Rectangle, Size};
 
 use hoarfrost::test_helpers::to_rgb;
 
@@ -15,6 +15,7 @@ use crate::app::{DemoApp, Message};
 use crate::data;
 use crate::layout_probe::{Entry, Probe, VIEWPORT, capture_session};
 use crate::menu_surface;
+use crate::pane_composites::CompositesMessage;
 
 /// The menu card's fill as the channels it must produce on screen.
 ///
@@ -510,5 +511,117 @@ fn the_rendered_card_respects_the_framework_minimum_card_width() {
         "the rendered card is {} wide, below the framework's minimum menu-card width {}",
         bounds.width,
         hoarfrost::surface::menu::MENU_CARD_WIDTH_MIN
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Context menu placement and mounting (UIF-CMENU-001, UIF-TAB-001)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn context_menu_placement_offsets_by_two_pixels_when_fitting() {
+    let window_size = Size::new(1400.0, 900.0);
+    let pointer = Point::new(100.0, 100.0);
+    let placement = menu_surface::context_card_placement("tab-todo", pointer, window_size);
+
+    assert_eq!(placement.origin, Point::new(102.0, 102.0));
+    assert!(!placement.flipped_horizontal);
+    assert!(!placement.flipped_vertical);
+    assert!(!placement.scrollable);
+    assert!(!placement.clamped_horizontal);
+    assert!(!placement.clamped_vertical);
+}
+
+#[test]
+fn context_menu_placement_flips_horizontally_near_right_margin() {
+    let window_size = Size::new(1400.0, 900.0);
+    let pointer = Point::new(1350.0, 100.0);
+    let placement = menu_surface::context_card_placement("tab-todo", pointer, window_size);
+
+    assert!(placement.flipped_horizontal);
+    assert!(!placement.flipped_vertical);
+    assert_eq!(placement.origin.x, 1350.0 - placement.size.width - 2.0);
+    assert_eq!(placement.origin.y, 102.0);
+}
+
+#[test]
+fn context_menu_placement_flips_vertically_near_bottom_margin() {
+    let window_size = Size::new(1400.0, 900.0);
+    let pointer = Point::new(100.0, 850.0);
+    let placement = menu_surface::context_card_placement("tab-todo", pointer, window_size);
+
+    assert!(!placement.flipped_horizontal);
+    assert!(placement.flipped_vertical);
+    assert_eq!(placement.origin.x, 102.0);
+    assert_eq!(placement.origin.y, 850.0 - placement.size.height - 2.0);
+}
+
+#[test]
+fn context_menu_placement_flips_both_near_bottom_right() {
+    let window_size = Size::new(1400.0, 900.0);
+    let pointer = Point::new(1350.0, 850.0);
+    let placement = menu_surface::context_card_placement("tab-todo", pointer, window_size);
+
+    assert!(placement.flipped_horizontal);
+    assert!(placement.flipped_vertical);
+    assert_eq!(placement.origin.x, 1350.0 - placement.size.width - 2.0);
+    assert_eq!(placement.origin.y, 850.0 - placement.size.height - 2.0);
+}
+
+#[test]
+fn context_menu_renders_in_app_and_click_away_dismisses() {
+    let mut app = booted_with(Message::CursorMoved(Point::new(200.0, 150.0)));
+    let _ = app.update(Message::Composites(CompositesMessage::TabContextMenu(
+        "tab-todo".to_string(),
+    )));
+
+    let bounds = card_bounds(&app, "tab-todo").expect("context menu card must be rendered");
+    assert!(bounds.width > 0.0 && bounds.height > 0.0);
+
+    // Clicking outside the card hits the backdrop and produces TabMenuDismissed
+    let far = Point::new(bounds.x + bounds.width + 400.0, bounds.y + 300.0);
+    let mut capture = capture_session();
+    let (_, messages) = capture.click_and_frame(VIEWPORT, app.view(), far);
+    assert!(
+        messages
+            .iter()
+            .any(|m| matches!(m, Message::Composites(CompositesMessage::TabMenuDismissed))),
+        "clicking outside context menu must emit TabMenuDismissed: {messages:?}"
+    );
+
+    // Applying TabMenuDismissed removes the context menu card
+    let _ = app.update(Message::Composites(CompositesMessage::TabMenuDismissed));
+    assert!(
+        card_bounds(&app, "tab-todo").is_none(),
+        "tab context menu card must be unmounted after dismissal"
+    );
+}
+
+#[test]
+fn context_menu_row_click_dispatches_tab_menu_action() {
+    let mut app = booted_with(Message::CursorMoved(Point::new(200.0, 150.0)));
+    let _ = app.update(Message::Composites(CompositesMessage::TabContextMenu(
+        "tab-todo".to_string(),
+    )));
+
+    let probe = Probe::capture(VIEWPORT, app.view());
+    let entry = probe
+        .find(&menu_surface::row_id("close"))
+        .expect("the Close action row must be rendered in context menu");
+
+    let centre = Point::new(
+        entry.bounds.x + entry.bounds.width / 2.0,
+        entry.bounds.y + entry.bounds.height / 2.0,
+    );
+
+    let mut capture = capture_session();
+    let (_, messages) = capture.click_and_frame(VIEWPORT, app.view(), centre);
+    assert!(
+        messages.iter().any(|m| matches!(
+            m,
+            Message::Composites(CompositesMessage::TabMenuAction(action, target))
+                if action == "close" && target == "tab-todo"
+        )),
+        "clicking context menu close row must produce TabMenuAction: {messages:?}"
     );
 }

@@ -255,7 +255,7 @@ pub use tab_strip::{
     LABEL_TAB_CLOSE_OTHERS, LABEL_TAB_COPY_PATH, LABEL_TAB_EDIT, LABEL_TAB_FORMAT_MARKDOWN,
     LABEL_TAB_OPEN_IN_EDITOR, LABEL_TAB_SHOW_IN_EXPLORER, TAB_MAX_WIDTH, TAB_MIN_WIDTH,
     TAB_STRIP_HEIGHT, TabCloseVerdict, TabContextMenuModel, TabItem, TabItemStyle, TabStrip,
-    TabStripModel, clamp_tab_width, resolve_tab_style, tab_context_menu,
+    TabStripModel, clamp_tab_width, resolve_tab_font, resolve_tab_style, tab_context_menu,
 };
 #[cfg(feature = "tree-view")]
 pub use tree_view::{

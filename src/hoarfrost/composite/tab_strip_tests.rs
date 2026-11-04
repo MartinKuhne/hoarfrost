@@ -162,9 +162,126 @@ fn test_request_close_all_returns_dirty_tabs() {
     model.open_tab(TabItem::new("a", "Doc A"));
     model.open_tab(TabItem::new("b", "Doc B").with_dirty(true));
     model.open_tab(TabItem::new("c", "Doc C").with_dirty(true));
+    model.open_tab(
+        TabItem::new("p_dirty", "Pinned Dirty")
+            .with_pinned(true)
+            .with_dirty(true),
+    );
+    model.open_tab(TabItem::new("p_clean", "Pinned Clean").with_pinned(true));
 
     let dirty = model.request_close_all();
     assert_eq!(dirty, vec!["b".to_string(), "c".to_string()]);
+}
+
+#[test]
+fn test_request_close_others_closes_clean_and_queues_dirty_excluding_pinned() {
+    let mut model = TabStripModel::new();
+    model.open_tab(TabItem::new("keep", "Keep Doc"));
+    model.open_tab(TabItem::new("clean_other", "Clean Other"));
+    model.open_tab(TabItem::new("dirty_other", "Dirty Other").with_dirty(true));
+    model.open_tab(
+        TabItem::new("pinned_dirty", "Pinned Dirty")
+            .with_pinned(true)
+            .with_dirty(true),
+    );
+    model.open_tab(TabItem::new("pinned_clean", "Pinned Clean").with_pinned(true));
+
+    // Request closing others keeping "keep"
+    let dirty = model.request_close_others("keep");
+
+    // Only unpinned dirty tabs are returned for confirmation
+    assert_eq!(dirty, vec!["dirty_other".to_string()]);
+
+    // Clean unpinned tab "clean_other" must be closed immediately
+    assert!(!model.tabs.iter().any(|t| t.id == "clean_other"));
+
+    // "keep", "dirty_other", "pinned_dirty", "pinned_clean" must remain in model
+    assert_eq!(model.tabs.len(), 4);
+    assert!(model.tabs.iter().any(|t| t.id == "keep"));
+    assert!(model.tabs.iter().any(|t| t.id == "dirty_other"));
+    assert!(model.tabs.iter().any(|t| t.id == "pinned_dirty"));
+    assert!(model.tabs.iter().any(|t| t.id == "pinned_clean"));
+
+    // "keep" must be selected as the active tab
+    assert_eq!(model.active_id.as_deref(), Some("keep"));
+}
+
+#[test]
+fn test_roving_keyboard_navigation_empty_model() {
+    let mut model = TabStripModel::new();
+
+    // All roving methods must be safe no-ops on empty model
+    model.select_next_tab();
+    assert_eq!(model.active_id, None);
+
+    model.select_previous_tab();
+    assert_eq!(model.active_id, None);
+
+    model.select_first_tab();
+    assert_eq!(model.active_id, None);
+
+    model.select_last_tab();
+    assert_eq!(model.active_id, None);
+}
+
+#[test]
+fn test_roving_keyboard_navigation_single_tab() {
+    let mut model = TabStripModel::new();
+    model.open_tab(TabItem::new("only", "Only Tab"));
+    assert_eq!(model.active_id.as_deref(), Some("only"));
+
+    model.select_next_tab();
+    assert_eq!(model.active_id.as_deref(), Some("only"));
+
+    model.select_previous_tab();
+    assert_eq!(model.active_id.as_deref(), Some("only"));
+
+    model.select_first_tab();
+    assert_eq!(model.active_id.as_deref(), Some("only"));
+
+    model.select_last_tab();
+    assert_eq!(model.active_id.as_deref(), Some("only"));
+}
+
+#[test]
+fn test_roving_keyboard_navigation_roving_and_wrap() {
+    let mut model = TabStripModel::new();
+    model.open_tab(TabItem::new("a", "Doc A"));
+    model.open_tab(TabItem::new("b", "Doc B"));
+    model.open_tab(TabItem::new("c", "Doc C"));
+    assert_eq!(model.active_id.as_deref(), Some("c"));
+
+    // Jump to first
+    model.select_first_tab();
+    assert_eq!(model.active_id.as_deref(), Some("a"));
+
+    // Next from A -> B
+    model.select_next_tab();
+    assert_eq!(model.active_id.as_deref(), Some("b"));
+
+    // Next from B -> C
+    model.select_next_tab();
+    assert_eq!(model.active_id.as_deref(), Some("c"));
+
+    // Next from C wraps circularly -> A
+    model.select_next_tab();
+    assert_eq!(model.active_id.as_deref(), Some("a"));
+
+    // Previous from A wraps circularly -> C
+    model.select_previous_tab();
+    assert_eq!(model.active_id.as_deref(), Some("c"));
+
+    // Previous from C -> B
+    model.select_previous_tab();
+    assert_eq!(model.active_id.as_deref(), Some("b"));
+
+    // Previous from B -> A
+    model.select_previous_tab();
+    assert_eq!(model.active_id.as_deref(), Some("a"));
+
+    // Jump to last
+    model.select_last_tab();
+    assert_eq!(model.active_id.as_deref(), Some("c"));
 }
 
 #[test]
@@ -476,4 +593,32 @@ fn test_tab_strip_layout_bounds() {
         1,
         "dirty tab must render 6x6px vector dot indicator"
     );
+
+    // Status slot must measure STATUS_SLOT_WIDTH (12px, §4.4.1)
+    let status_slots: Vec<_> = candidates
+        .iter()
+        .filter(|c| c.kind == "container" && (c.bounds.width - STATUS_SLOT_WIDTH).abs() < 0.1)
+        .collect();
+    assert!(
+        !status_slots.is_empty(),
+        "dirty tab must wrap dot inside 12px status slot container (§4.4.1)"
+    );
+}
+
+#[test]
+fn test_tab_visual_attributes() {
+    // 1. Status slot width (12px, §4.4.1)
+    assert_eq!(STATUS_SLOT_WIDTH, 12.0);
+
+    // 2. Close icon size (14px, §4.4.1)
+    assert_eq!(CLOSE_ICON_SIZE, 14.0);
+    assert_eq!(CLOSE_ICON_SIZE, size::ICON_SM);
+
+    // 3. Active tab typography (13px SemiBold, §4.4.2)
+    let active_font = resolve_tab_font(true);
+    assert_eq!(active_font.weight, iced::font::Weight::Semibold);
+
+    // 4. Inactive tab typography (Default Regular, §4.4.2)
+    let inactive_font = resolve_tab_font(false);
+    assert_eq!(inactive_font.weight, iced::Font::DEFAULT.weight);
 }

@@ -38,6 +38,12 @@ pub const DIRTY_DOT_DIAMETER: f32 = size::INDICATOR_DOT;
 /// Size of the tab close button target in pixels (`size.hit_target.min` - 24px, §4.4.3).
 pub const CLOSE_BUTTON_SIZE: f32 = size::HIT_TARGET_MIN;
 
+/// Width of the leading status slot in pixels (12px, §4.4.1).
+const STATUS_SLOT_WIDTH: f32 = 12.0;
+
+/// Glyph size of the close button icon in pixels (`size::ICON_SM` - 14px, §4.4.1).
+const CLOSE_ICON_SIZE: f32 = size::ICON_SM;
+
 /// Clamp a proposed tab width into [`TAB_MIN_WIDTH`, `TAB_MAX_WIDTH`] (`UIF-TAB-002`).
 #[must_use]
 pub fn clamp_tab_width(width: f32) -> f32 {
@@ -202,6 +208,74 @@ impl TabStripModel {
         }
     }
 
+    /// Select the next tab in roving order, circularly wrapping from last to first (`UIF-TAB-001`).
+    ///
+    /// No-op if the tab strip is empty.
+    pub fn select_next_tab(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
+        let next_idx = match &self.active_id {
+            Some(active) => self
+                .tabs
+                .iter()
+                .position(|t| &t.id == active)
+                .map_or(0, |idx| (idx + 1) % self.tabs.len()),
+            None => 0,
+        };
+
+        let next_id = self.tabs[next_idx].id.clone();
+        self.select_tab(&next_id);
+    }
+
+    /// Select the previous tab in roving order, circularly wrapping from first to last (`UIF-TAB-001`).
+    ///
+    /// No-op if the tab strip is empty.
+    pub fn select_previous_tab(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
+        let prev_idx = match &self.active_id {
+            Some(active) => self
+                .tabs
+                .iter()
+                .position(|t| &t.id == active)
+                .map_or(0, |idx| {
+                    if idx == 0 {
+                        self.tabs.len() - 1
+                    } else {
+                        idx - 1
+                    }
+                }),
+            None => self.tabs.len() - 1,
+        };
+
+        let prev_id = self.tabs[prev_idx].id.clone();
+        self.select_tab(&prev_id);
+    }
+
+    /// Select the first tab in the strip (`UIF-TAB-001`, Home key).
+    ///
+    /// No-op if the tab strip is empty.
+    pub fn select_first_tab(&mut self) {
+        if let Some(first) = self.tabs.first() {
+            let first_id = first.id.clone();
+            self.select_tab(&first_id);
+        }
+    }
+
+    /// Select the last tab in the strip (`UIF-TAB-001`, End key).
+    ///
+    /// No-op if the tab strip is empty.
+    pub fn select_last_tab(&mut self) {
+        if let Some(last) = self.tabs.last() {
+            let last_id = last.id.clone();
+            self.select_tab(&last_id);
+        }
+    }
+
     /// Request closing a tab by `id` (`UIF-TAB-003`).
     ///
     /// If the tab is pinned (`is_pinned == true`), returns [`TabCloseVerdict::RefusedPinned`]
@@ -248,12 +322,46 @@ impl TabStripModel {
         self.close_tab_internal(vanished_path)
     }
 
-    /// Collect all dirty tabs that require confirmation before closing all tabs.
+    /// Collect IDs of dirty unpinned tabs that require confirmation before closing all tabs except `keep_id` (`UIF-TAB-003`).
+    ///
+    /// Clean unpinned tabs other than `keep_id` are closed immediately. Pinned tabs are excluded and remain open.
+    pub fn request_close_others(&mut self, keep_id: &str) -> Vec<String> {
+        let other_ids: Vec<String> = self
+            .tabs
+            .iter()
+            .filter(|t| t.id != keep_id && !t.is_pinned)
+            .map(|t| t.id.clone())
+            .collect();
+
+        let mut dirty_ids = Vec::new();
+        for other_id in other_ids {
+            let is_dirty = self
+                .tabs
+                .iter()
+                .find(|t| t.id == other_id)
+                .is_some_and(|t| t.is_dirty);
+            if is_dirty {
+                dirty_ids.push(other_id);
+            } else {
+                self.close_tab_internal(&other_id);
+            }
+        }
+
+        if self.tabs.iter().any(|t| t.id == keep_id) {
+            self.select_tab(keep_id);
+        }
+
+        dirty_ids
+    }
+
+    /// Collect all dirty unpinned tabs that require confirmation before closing all tabs (`UIF-TAB-003`).
+    ///
+    /// Pinned tabs are excluded because they cannot be closed.
     #[must_use]
     pub fn request_close_all(&self) -> Vec<String> {
         self.tabs
             .iter()
-            .filter(|t| t.is_dirty)
+            .filter(|t| !t.is_pinned && t.is_dirty)
             .map(|t| t.id.clone())
             .collect()
     }
@@ -344,6 +452,22 @@ pub fn resolve_tab_style(
         text_color,
         dirty_color,
         top_accent,
+    }
+}
+
+/// Resolve the title label typography font for a tab (`UIF-TAB-001`, §4.4.2).
+///
+/// Active tabs render with [`iced::font::Weight::Semibold`] (13px SemiBold, §4.4.2).
+/// Inactive tabs render with [`iced::Font::DEFAULT`].
+#[must_use]
+pub fn resolve_tab_font(is_active: bool) -> iced::Font {
+    if is_active {
+        iced::Font {
+            weight: iced::font::Weight::Semibold,
+            ..iced::Font::DEFAULT
+        }
+    } else {
+        iced::Font::DEFAULT
     }
 }
 
@@ -441,13 +565,22 @@ impl<'a, Message: 'a + Clone> From<TabStrip<'a, Message>> for Element<'a, Messag
                     snap: true,
                     text_color: None,
                 });
-                tab_content = tab_content.push(dirty_dot);
+
+                let status_slot = iced::widget::container(dirty_dot)
+                    .width(Length::Fixed(STATUS_SLOT_WIDTH))
+                    .align_x(alignment::Horizontal::Center)
+                    .align_y(alignment::Vertical::Center);
+
+                tab_content = tab_content.push(status_slot);
             }
+
+            let title_font = resolve_tab_font(is_active);
 
             tab_content = tab_content.push(
                 iced::widget::text(tab.title.clone())
                     .size(Pixels(typography::UI_COMPACT.size))
                     .line_height(typography::UI_COMPACT.iced_line_height())
+                    .font(title_font)
                     .color(style.text_color),
             );
 
@@ -459,7 +592,7 @@ impl<'a, Message: 'a + Clone> From<TabStrip<'a, Message>> for Element<'a, Messag
                     iced::widget::button(
                         iced::widget::container(
                             iced::widget::text("×")
-                                .size(Pixels(typography::CAPTION.size))
+                                .size(Pixels(CLOSE_ICON_SIZE))
                                 .align_x(alignment::Horizontal::Center)
                                 .align_y(alignment::Vertical::Center),
                         )

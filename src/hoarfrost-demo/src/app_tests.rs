@@ -422,3 +422,148 @@ fn latching_a_navbar_trigger_adds_the_mounted_card_to_the_count() {
         "closing the card must take its rows back out of the count"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Cursor tracking, window resizing and context menu mutual exclusion (UIF-CMENU-002, UIF-CMENU-003)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn cursor_moved_updates_tracked_cursor_position() {
+    let (mut app, _) = DemoApp::boot();
+    assert_eq!(app.cursor_position(), Point::ORIGIN);
+
+    send(&mut app, Message::CursorMoved(Point::new(450.0, 320.0)));
+    assert_eq!(app.cursor_position(), Point::new(450.0, 320.0));
+}
+
+#[test]
+fn window_resized_updates_tracked_window_size() {
+    let (mut app, _) = DemoApp::boot();
+    assert_eq!(app.window_size(), Size::new(1400.0, 900.0));
+
+    send(&mut app, Message::WindowResized(Size::new(1920.0, 1080.0)));
+    assert_eq!(app.window_size(), Size::new(1920.0, 1080.0));
+}
+
+#[test]
+fn mutual_exclusion_navbar_toggled_closes_tab_context_menu() {
+    let (mut app, _) = DemoApp::boot();
+
+    // 1. Open tab context menu first
+    send(
+        &mut app,
+        Message::Composites(CompositesMessage::TabContextMenu("tab-todo".into())),
+    );
+    assert_eq!(
+        app.composites().tab_context_menu_target.as_deref(),
+        Some("tab-todo")
+    );
+    assert_eq!(app.active_menu_id(), None);
+
+    // 2. Open navbar menu: tab context menu must be dismissed (UIF-CMENU-002)
+    send(&mut app, Message::NavbarToggled("file".into()));
+    assert_eq!(app.active_menu_id(), Some("file"));
+    assert_eq!(
+        app.composites().tab_context_menu_target,
+        None,
+        "opening a navbar menu must dismiss open tab context menu (UIF-CMENU-002)"
+    );
+}
+
+#[test]
+fn mutual_exclusion_tab_context_menu_closes_navbar_menu() {
+    let (mut app, _) = DemoApp::boot();
+
+    // 1. Open navbar menu first
+    send(&mut app, Message::NavbarToggled("file".into()));
+    assert_eq!(app.active_menu_id(), Some("file"));
+
+    // 2. Open tab context menu: navbar menu must be dismissed (UIF-CMENU-002)
+    send(
+        &mut app,
+        Message::Composites(CompositesMessage::TabContextMenu("tab-todo".into())),
+    );
+    assert_eq!(
+        app.active_menu_id(),
+        None,
+        "opening a tab context menu must close open navbar menu (UIF-CMENU-002)"
+    );
+    assert_eq!(
+        app.composites().tab_context_menu_target.as_deref(),
+        Some("tab-todo")
+    );
+}
+
+#[test]
+fn escape_key_dismisses_tab_context_menu_when_open() {
+    let escape_event = iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
+        key: iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape),
+        modified_key: iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape),
+        physical_key: iced::keyboard::key::Physical::Code(iced::keyboard::key::Code::Escape),
+        location: iced::keyboard::Location::Standard,
+        modifiers: iced::keyboard::Modifiers::default(),
+        text: None,
+        repeat: false,
+    });
+
+    let context_menu_msg = handle_event_with_context_menu(
+        escape_event.clone(),
+        iced::event::Status::Ignored,
+        iced::window::Id::unique(),
+    );
+    assert!(
+        matches!(
+            context_menu_msg,
+            Some(Message::Composites(CompositesMessage::TabMenuDismissed))
+        ),
+        "handle_event_with_context_menu must map Escape to TabMenuDismissed (UIF-CMENU-003)"
+    );
+
+    let default_msg = handle_event_default(
+        escape_event,
+        iced::event::Status::Ignored,
+        iced::window::Id::unique(),
+    );
+    assert!(
+        default_msg.is_none(),
+        "default event handler must ignore Escape when context menu is closed"
+    );
+}
+
+#[test]
+fn runtime_events_route_cursor_moved_and_window_resized() {
+    let cursor_event = iced::Event::Mouse(iced::mouse::Event::CursorMoved {
+        position: Point::new(345.0, 678.0),
+    });
+    let resize_event = iced::Event::Window(iced::window::Event::Resized(Size::new(1024.0, 768.0)));
+
+    // Verify default handler
+    let msg1 = handle_event_default(
+        cursor_event.clone(),
+        iced::event::Status::Ignored,
+        iced::window::Id::unique(),
+    );
+    assert!(matches!(msg1, Some(Message::CursorMoved(p)) if p == Point::new(345.0, 678.0)));
+
+    let msg2 = handle_event_default(
+        resize_event.clone(),
+        iced::event::Status::Ignored,
+        iced::window::Id::unique(),
+    );
+    assert!(matches!(msg2, Some(Message::WindowResized(s)) if s == Size::new(1024.0, 768.0)));
+
+    // Verify with_context_menu handler also routes them
+    let msg3 = handle_event_with_context_menu(
+        cursor_event,
+        iced::event::Status::Ignored,
+        iced::window::Id::unique(),
+    );
+    assert!(matches!(msg3, Some(Message::CursorMoved(p)) if p == Point::new(345.0, 678.0)));
+
+    let msg4 = handle_event_with_context_menu(
+        resize_event,
+        iced::event::Status::Ignored,
+        iced::window::Id::unique(),
+    );
+    assert!(matches!(msg4, Some(Message::WindowResized(s)) if s == Size::new(1024.0, 768.0)));
+}
