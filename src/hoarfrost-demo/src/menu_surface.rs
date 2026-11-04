@@ -24,10 +24,12 @@
 //!
 //! Unit tests live in the sibling `menu_surface_tests.rs` sidecar.
 
-use iced::widget::{Column, container, stack};
-use iced::{Alignment, Background, Border, Element, Length, Padding, Rectangle, Size};
+use iced::widget::{Column, Space, container, mouse_area, scrollable, stack};
+use iced::{Alignment, Background, Border, Element, Length, Padding, Point, Rectangle, Size};
 
 use hoarfrost::composite::navbar::NAVBAR_HEIGHT_STANDARD;
+use hoarfrost::composite::tab_strip::tab_context_menu;
+use hoarfrost::geometry::anchor::{Anchor, Placement, solve};
 use hoarfrost::surface::menu::MENU_CARD_WIDTH_MIN;
 use hoarfrost::surface::menu::model::{Menu, Row};
 use hoarfrost::surface::menu::view::{self, MenuRow};
@@ -35,6 +37,7 @@ use hoarfrost::token::color::Palette;
 use hoarfrost::token::{shape, space};
 
 use crate::app::Message;
+use crate::pane_composites::CompositesMessage;
 
 /// Prefix of the rendered menu card's stable widget id.
 pub const CARD_ID_PREFIX: &str = "demo.menu.card.";
@@ -167,6 +170,83 @@ pub fn mount<'a>(
         });
 
     stack(vec![base, layer.into()])
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
+}
+
+/// One rendered row of the mounted context menu card (`UIF-TAB-001`, `UIF-CMENU-001`).
+#[must_use]
+pub fn context_card_row<'a>(row: Row, target_id: &str) -> Element<'a, Message> {
+    let key = row.key().to_string();
+    let tid = target_id.to_string();
+
+    MenuRow::new(row, row_id(&key), move |_event| {
+        Message::Composites(CompositesMessage::TabMenuAction(key.clone(), tid.clone()))
+    })
+    .palette(Palette::dark())
+    .into()
+}
+
+/// Where the context menu card for `target_id` lands in root space (`UIF-CMENU-001`).
+#[must_use]
+pub fn context_card_placement(target_id: &str, pointer: Point, window_size: Size) -> Placement {
+    let menu = tab_context_menu(target_id);
+    let size = card_size(&menu);
+    solve(
+        Anchor::Pointer { point: pointer },
+        size,
+        Rectangle::with_size(window_size),
+    )
+}
+
+/// Mounts a tab context menu card floating at `pointer` inside `window_size` (`UIF-CMENU-001`, `UIF-TAB-001`).
+///
+/// Anchors to the pointer via [`hoarfrost::geometry::anchor::solve`], wrapping the card in a
+/// scrollable container when required by the viewport bounds, and stacking a click-away
+/// dismissal backdrop between `base` and the card layer.
+#[must_use]
+pub fn mount_context_menu<'a>(
+    base: Element<'a, Message>,
+    target_id: &str,
+    pointer: Point,
+    window_size: Size,
+) -> Element<'a, Message> {
+    let menu = tab_context_menu(target_id);
+    let size = card_size(&menu);
+    let viewport_rect = Rectangle::with_size(window_size);
+    let placement = solve(Anchor::Pointer { point: pointer }, size, viewport_rect);
+
+    let mut rows = Column::<Message>::new().width(Length::Fill);
+    for row in menu.rows() {
+        rows = rows.push(context_card_row(row.clone(), target_id));
+    }
+
+    let card = card_container(rows.width(Length::Fill), card_id(target_id));
+
+    let card: Element<'a, Message> = if placement.scrollable {
+        let height = placement.visible_height(viewport_rect);
+        scrollable(card).height(Length::Fixed(height)).into()
+    } else {
+        card
+    };
+
+    let layer = container(card)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .align_x(Alignment::Start)
+        .align_y(Alignment::Start)
+        .padding(Padding {
+            top: placement.origin.y,
+            right: 0.0,
+            bottom: 0.0,
+            left: placement.origin.x,
+        });
+
+    let click_away = mouse_area(Space::new().width(Length::Fill).height(Length::Fill))
+        .on_press(Message::Composites(CompositesMessage::TabMenuDismissed));
+
+    stack(vec![base, click_away.into(), layer.into()])
         .width(Length::Fill)
         .height(Length::Fill)
         .into()

@@ -16,8 +16,8 @@
 //! the status bar. This module owns only the composition and the state the
 //! panes mutate.
 
-use iced::Element;
 use iced::widget::{Column, scrollable};
+use iced::{Element, Point, Size};
 
 use hoarfrost::composite::navbar::NavBarModel;
 use hoarfrost::composite::split_divider::{SplitAxis, SplitDividerModel};
@@ -67,6 +67,10 @@ pub enum Message {
     Atoms(pane_atoms::AtomsMessage),
     /// A composite in the right pane reported something.
     Composites(pane_composites::CompositesMessage),
+    /// The mouse cursor moved to a new root-space position.
+    CursorMoved(Point),
+    /// The window was resized.
+    WindowResized(Size),
 }
 
 /// Everything the demo application carries between frames.
@@ -84,6 +88,10 @@ pub struct DemoApp {
     atoms: pane_atoms::AtomsState,
     /// State owned by the composites pane (controlled-widget models live here).
     composites: pane_composites::CompositesState,
+    /// Current cursor position in root-space coordinates.
+    cursor_position: Point,
+    /// Current window size.
+    window_size: Size,
 }
 
 impl DemoApp {
@@ -109,6 +117,8 @@ impl DemoApp {
                 split_ratio: data::SPLIT_RATIO_DEFAULT,
                 atoms: pane_atoms::AtomsState::new(),
                 composites: pane_composites::CompositesState::new(),
+                cursor_position: Point::ORIGIN,
+                window_size: Size::new(1400.0, 900.0),
             },
             iced::Task::none(),
         )
@@ -124,11 +134,13 @@ impl DemoApp {
             Message::Close => return iced::exit(),
             Message::NavbarToggled(id) => {
                 self.navbar.toggle_menu(&id);
-                self.last_event = if self.navbar.active_menu_id.is_some() {
-                    format!("{}: {id}", strings::NAVBAR_OPENED)
+                if self.navbar.active_menu_id.is_some() {
+                    // Mutual exclusion (UIF-CMENU-002): opening navbar menu closes any open tab context menu
+                    self.composites.tab_context_menu_target = None;
+                    self.last_event = format!("{}: {id}", strings::NAVBAR_OPENED);
                 } else {
-                    String::from(strings::NAVBAR_CLOSED)
-                };
+                    self.last_event = String::from(strings::NAVBAR_CLOSED);
+                }
             }
             Message::MenuRowActivated(key) => {
                 self.last_event = format!("{}: {key}", strings::MENU_ROW_ACTIVATED);
@@ -150,11 +162,46 @@ impl DemoApp {
                 self.last_event = pane_atoms::AtomsState::describe(&atoms);
             }
             Message::Composites(composite) => {
+                if matches!(
+                    composite,
+                    pane_composites::CompositesMessage::TabContextMenu(_)
+                ) {
+                    // Mutual exclusion (UIF-CMENU-002): opening context menu closes any open navbar menu
+                    self.navbar.close_menu();
+                }
                 self.composites.apply(&composite);
                 self.last_event = self.composites.describe(&composite);
             }
+            Message::CursorMoved(position) => {
+                self.cursor_position = position;
+            }
+            Message::WindowResized(size) => {
+                self.window_size = size;
+            }
         }
         iced::Task::none()
+    }
+
+    /// Global event subscription tracking mouse cursor position, window size,
+    /// and Escape dismissal when a context menu is open (`UIF-CMENU-003`).
+    pub fn subscription(&self) -> iced::Subscription<Message> {
+        if self.composites.tab_context_menu_target.is_some() {
+            iced::event::listen_with(handle_event_with_context_menu)
+        } else {
+            iced::event::listen_with(handle_event_default)
+        }
+    }
+
+    /// Current mouse cursor position in root-space coordinates.
+    #[must_use]
+    pub fn cursor_position(&self) -> Point {
+        self.cursor_position
+    }
+
+    /// Current window size.
+    #[must_use]
+    pub fn window_size(&self) -> Size {
+        self.window_size
     }
 
     /// The navbar trigger currently latched open, if any.
@@ -234,10 +281,61 @@ impl DemoApp {
         // The card is mounted only while a trigger is latched open, so a
         // closed menu leaves the rendered tree exactly as it was — no
         // phantom surface, and no change to the closed-menu goldens.
-        match self.active_menu_id() {
+        let base = match self.active_menu_id() {
             Some(trigger) => menu_surface::mount(base, trigger, &self.menu),
             None => base,
+        };
+
+        // Mount the context menu overlay if a tab context menu target is open (UIF-CMENU-001).
+        match &self.composites.tab_context_menu_target {
+            Some(target_id) => menu_surface::mount_context_menu(
+                base,
+                target_id,
+                self.cursor_position,
+                self.window_size,
+            ),
+            None => base,
         }
+    }
+}
+
+/// Handles runtime events when no tab context menu is open.
+fn handle_event_default(
+    event: iced::Event,
+    _status: iced::event::Status,
+    _window: iced::window::Id,
+) -> Option<Message> {
+    match event {
+        iced::Event::Mouse(iced::mouse::Event::CursorMoved { position }) => {
+            Some(Message::CursorMoved(position))
+        }
+        iced::Event::Window(iced::window::Event::Resized(size)) => {
+            Some(Message::WindowResized(size))
+        }
+        _ => None,
+    }
+}
+
+/// Handles runtime events when a tab context menu is open, intercepting Escape (`UIF-CMENU-003`).
+fn handle_event_with_context_menu(
+    event: iced::Event,
+    _status: iced::event::Status,
+    _window: iced::window::Id,
+) -> Option<Message> {
+    match event {
+        iced::Event::Mouse(iced::mouse::Event::CursorMoved { position }) => {
+            Some(Message::CursorMoved(position))
+        }
+        iced::Event::Window(iced::window::Event::Resized(size)) => {
+            Some(Message::WindowResized(size))
+        }
+        iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            key: iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape),
+            ..
+        }) => Some(Message::Composites(
+            pane_composites::CompositesMessage::TabMenuDismissed,
+        )),
+        _ => None,
     }
 }
 

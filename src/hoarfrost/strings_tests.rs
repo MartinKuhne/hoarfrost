@@ -8,7 +8,7 @@
 
 use super::*;
 use crate::composite::{
-    command_palette, diff_viewer, keybind_recorder, navigation_rail, side_sheet, stepper,
+    command_palette, diff_viewer, keybind_recorder, navigation_rail, side_sheet, stepper, tab_strip,
 };
 use crate::widget::{color_picker, date_picker, time_picker};
 
@@ -145,6 +145,50 @@ fn composite_labels_keep_their_original_paths_and_values() {
 }
 
 #[test]
+fn tab_strip_labels_keep_their_original_paths_and_values() {
+    assert_eq!(
+        tab_strip::LABEL_TAB_CLOSE,
+        LABEL_TAB_CLOSE,
+        "composite::tab_strip::LABEL_TAB_CLOSE must read the catalogue value"
+    );
+    assert_eq!(
+        tab_strip::LABEL_TAB_CLOSE_OTHERS,
+        LABEL_TAB_CLOSE_OTHERS,
+        "composite::tab_strip::LABEL_TAB_CLOSE_OTHERS must read the catalogue value"
+    );
+    assert_eq!(
+        tab_strip::LABEL_TAB_CLOSE_ALL,
+        LABEL_TAB_CLOSE_ALL,
+        "composite::tab_strip::LABEL_TAB_CLOSE_ALL must read the catalogue value"
+    );
+    assert_eq!(
+        tab_strip::LABEL_TAB_EDIT,
+        LABEL_TAB_EDIT,
+        "composite::tab_strip::LABEL_TAB_EDIT must read the catalogue value"
+    );
+    assert_eq!(
+        tab_strip::LABEL_TAB_OPEN_IN_EDITOR,
+        LABEL_TAB_OPEN_IN_EDITOR,
+        "composite::tab_strip::LABEL_TAB_OPEN_IN_EDITOR must read the catalogue value"
+    );
+    assert_eq!(
+        tab_strip::LABEL_TAB_FORMAT_MARKDOWN,
+        LABEL_TAB_FORMAT_MARKDOWN,
+        "composite::tab_strip::LABEL_TAB_FORMAT_MARKDOWN must read the catalogue value"
+    );
+    assert_eq!(
+        tab_strip::LABEL_TAB_COPY_PATH,
+        LABEL_TAB_COPY_PATH,
+        "composite::tab_strip::LABEL_TAB_COPY_PATH must read the catalogue value"
+    );
+    assert_eq!(
+        tab_strip::LABEL_TAB_SHOW_IN_EXPLORER,
+        LABEL_TAB_SHOW_IN_EXPLORER,
+        "composite::tab_strip::LABEL_TAB_SHOW_IN_EXPLORER must read the catalogue value"
+    );
+}
+
+#[test]
 fn date_and_time_picker_labels_keep_their_original_paths_and_values() {
     assert_eq!(
         date_picker::PLACEHOLDER_DATE,
@@ -277,6 +321,14 @@ fn catalogue_text_is_the_shipped_copy() {
     assert_eq!(PLACEHOLDER_24H_SEC, "--:--:--");
     assert_eq!(PLACEHOLDER_12H, "--:-- --");
     assert_eq!(PLACEHOLDER_12H_SEC, "--:--:-- --");
+    assert_eq!(LABEL_TAB_CLOSE, "Close");
+    assert_eq!(LABEL_TAB_CLOSE_OTHERS, "Close Others");
+    assert_eq!(LABEL_TAB_CLOSE_ALL, "Close All");
+    assert_eq!(LABEL_TAB_EDIT, "Edit");
+    assert_eq!(LABEL_TAB_OPEN_IN_EDITOR, "Open in Editor");
+    assert_eq!(LABEL_TAB_FORMAT_MARKDOWN, "Format Markdown");
+    assert_eq!(LABEL_TAB_COPY_PATH, "Copy Path");
+    assert_eq!(LABEL_TAB_SHOW_IN_EXPLORER, "Show in File Explorer");
 }
 
 #[test]
@@ -316,6 +368,14 @@ fn labels_are_presentable_single_line_text() {
         ("PLACEHOLDER_24H_SEC", PLACEHOLDER_24H_SEC),
         ("PLACEHOLDER_12H", PLACEHOLDER_12H),
         ("PLACEHOLDER_12H_SEC", PLACEHOLDER_12H_SEC),
+        ("LABEL_TAB_CLOSE", LABEL_TAB_CLOSE),
+        ("LABEL_TAB_CLOSE_OTHERS", LABEL_TAB_CLOSE_OTHERS),
+        ("LABEL_TAB_CLOSE_ALL", LABEL_TAB_CLOSE_ALL),
+        ("LABEL_TAB_EDIT", LABEL_TAB_EDIT),
+        ("LABEL_TAB_OPEN_IN_EDITOR", LABEL_TAB_OPEN_IN_EDITOR),
+        ("LABEL_TAB_FORMAT_MARKDOWN", LABEL_TAB_FORMAT_MARKDOWN),
+        ("LABEL_TAB_COPY_PATH", LABEL_TAB_COPY_PATH),
+        ("LABEL_TAB_SHOW_IN_EXPLORER", LABEL_TAB_SHOW_IN_EXPLORER),
     ] {
         assert!(
             !label.trim().is_empty(),

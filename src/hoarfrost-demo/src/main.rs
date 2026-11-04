@@ -22,6 +22,7 @@ use hoarfrost_demo::{app, theme};
 /// process-wide font system.
 fn main() -> iced::Result {
     iced::application(app::DemoApp::boot, app::DemoApp::update, app::DemoApp::view)
+        .subscription(app::DemoApp::subscription)
         .title(app::strings::WINDOW_TITLE)
         .theme(|_app: &app::DemoApp| theme::demo_theme())
         .run()

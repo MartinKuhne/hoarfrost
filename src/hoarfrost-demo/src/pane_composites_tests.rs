@@ -278,6 +278,73 @@ fn closing_a_clean_tab_never_asks() {
 }
 
 #[test]
+fn test_closing_pinned_tab_is_refused() {
+    let mut state = CompositesState::new();
+    let before = state.tabs.tabs.len();
+
+    // In data fixture, "tab-archive" is pinned
+    let line = fired(
+        &mut state,
+        &CompositesMessage::TabCloseRequested("tab-archive".into()),
+    );
+    assert_eq!(None, state.pending_close);
+    assert_eq!(before, state.tabs.tabs.len());
+    assert!(
+        state.tabs.tabs.iter().any(|t| t.id == "tab-archive"),
+        "pinned tab must not be closed"
+    );
+    assert_eq!(line, "Cannot close pinned tab 'tab-archive'");
+    assert_eq!(
+        Some("Tab 'tab-archive' is pinned and cannot be closed".to_string()),
+        state.last_tab_action
+    );
+}
+
+#[test]
+fn test_close_all_queues_multiple_dirty_tabs() {
+    let mut state = CompositesState::new();
+    // Default fixture has "tab-notes" as dirty. Add another dirty tab:
+    state.tabs.open_tab(
+        hoarfrost::composite::tab_strip::TabItem::new("tab-extra-dirty", "extra.md")
+            .with_dirty(true),
+    );
+
+    // Request close_all via context menu action
+    fired(
+        &mut state,
+        &CompositesMessage::TabMenuAction("close_all".into(), "tab-report".into()),
+    );
+
+    // The first dirty tab should be in pending_close, the second in pending_close_queue
+    assert_eq!(Some("tab-notes".to_string()), state.pending_close);
+    assert_eq!(
+        vec!["tab-extra-dirty".to_string()],
+        state.pending_close_queue
+    );
+
+    // Confirm discarding edits for the first dirty tab
+    let line1 = fired(&mut state, &CompositesMessage::TabConfirmDiscard);
+    assert!(line1.contains("Discarded"), "{line1}");
+    assert!(
+        state.tabs.tabs.iter().all(|t| t.id != "tab-notes"),
+        "tab-notes should now be closed"
+    );
+    // The next dirty tab should now be promoted to pending_close
+    assert_eq!(Some("tab-extra-dirty".to_string()), state.pending_close);
+    assert!(state.pending_close_queue.is_empty());
+
+    // Cancel discarding edits for the second dirty tab
+    let line2 = fired(&mut state, &CompositesMessage::TabCancelDiscard);
+    assert!(line2.contains("Cancelled"), "{line2}");
+    assert_eq!(None, state.pending_close);
+    assert!(state.pending_close_queue.is_empty());
+    assert!(
+        state.tabs.tabs.iter().any(|t| t.id == "tab-extra-dirty"),
+        "tab-extra-dirty should remain open after cancel"
+    );
+}
+
+#[test]
 fn closing_a_tab_reassigns_the_active_one() {
     let mut state = CompositesState::new();
     assert_eq!(Some("tab-report".to_string()), state.tabs.active_id);
@@ -296,6 +363,180 @@ fn closing_a_tab_reassigns_the_active_one() {
             .any(|tab| Some(&tab.id) == active.as_ref()),
         "the new active tab must still be open"
     );
+}
+
+#[test]
+fn tab_context_menu_opens_and_dispatches_action() {
+    let mut state = CompositesState::new();
+    assert_eq!(None, state.tab_context_menu_target);
+
+    // Open context menu on tab-report
+    let line = fired(
+        &mut state,
+        &CompositesMessage::TabContextMenu("tab-report".into()),
+    );
+    assert_eq!(
+        Some("tab-report".to_string()),
+        state.tab_context_menu_target
+    );
+    assert!(line.contains("tab-report"), "{line}");
+
+    // Dismiss context menu
+    let line = fired(&mut state, &CompositesMessage::TabMenuDismissed);
+    assert_eq!(None, state.tab_context_menu_target);
+    assert!(line.contains("dismissed"), "{line}");
+
+    // Reopen context menu and execute copy_path
+    fired(
+        &mut state,
+        &CompositesMessage::TabContextMenu("tab-report".into()),
+    );
+    let line = fired(
+        &mut state,
+        &CompositesMessage::TabMenuAction("copy_path".into(), "tab-report".into()),
+    );
+    assert_eq!(None, state.tab_context_menu_target);
+    assert!(line.contains("copy_path"), "{line}");
+    assert_eq!(
+        Some("Action 'copy_path' on tab-report".to_string()),
+        state.last_tab_action
+    );
+
+    // Context menu close_others retains target tab and prompts for dirty tabs
+    let before_count = state.tabs.tabs.len();
+    assert!(before_count > 2);
+    fired(
+        &mut state,
+        &CompositesMessage::TabContextMenu("tab-report".into()),
+    );
+    fired(
+        &mut state,
+        &CompositesMessage::TabMenuAction("close_others".into(), "tab-report".into()),
+    );
+    assert!(state.tabs.tabs.iter().any(|t| t.id == "tab-report"));
+    assert_eq!(Some("tab-notes".to_string()), state.pending_close);
+
+    // Close action from context menu
+    fired(
+        &mut state,
+        &CompositesMessage::TabContextMenu("tab-report".into()),
+    );
+    fired(
+        &mut state,
+        &CompositesMessage::TabMenuAction("close".into(), "tab-report".into()),
+    );
+    assert!(!state.tabs.tabs.iter().any(|t| t.id == "tab-report"));
+}
+
+#[test]
+fn tab_confirm_discard_closes_pending_dirty_tab() {
+    let mut state = CompositesState::new();
+    let before = state.tabs.tabs.len();
+
+    // Request closing dirty tab-notes
+    fired(
+        &mut state,
+        &CompositesMessage::TabCloseRequested("tab-notes".into()),
+    );
+    assert_eq!(Some("tab-notes".to_string()), state.pending_close);
+    assert_eq!(before, state.tabs.tabs.len());
+
+    // Confirm discard
+    let line = fired(&mut state, &CompositesMessage::TabConfirmDiscard);
+    assert_eq!(None, state.pending_close);
+    assert_eq!(before - 1, state.tabs.tabs.len());
+    assert!(!state.tabs.tabs.iter().any(|t| t.id == "tab-notes"));
+    assert!(line.contains("Discarded"), "{line}");
+}
+
+#[test]
+fn tab_cancel_discard_leaves_dirty_tab_open() {
+    let mut state = CompositesState::new();
+    let before = state.tabs.tabs.len();
+
+    // Request closing dirty tab-notes
+    fired(
+        &mut state,
+        &CompositesMessage::TabCloseRequested("tab-notes".into()),
+    );
+    assert_eq!(Some("tab-notes".to_string()), state.pending_close);
+
+    // Cancel discard
+    let line = fired(&mut state, &CompositesMessage::TabCancelDiscard);
+    assert_eq!(None, state.pending_close);
+    assert_eq!(before, state.tabs.tabs.len());
+    assert!(state.tabs.tabs.iter().any(|t| t.id == "tab-notes"));
+    assert!(line.contains("Cancelled"), "{line}");
+}
+
+#[test]
+fn tab_add_overflow_appends_tabs() {
+    let mut state = CompositesState::new();
+    let initial = state.tabs.tabs.len();
+
+    let line1 = fired(&mut state, &CompositesMessage::TabAddOverflow);
+    assert_eq!(initial + 1, state.tabs.tabs.len());
+    assert_eq!(Some("tab-extra-1".to_string()), state.tabs.active_id);
+    assert!(line1.contains("Added tab"), "{line1}");
+
+    let line2 = fired(&mut state, &CompositesMessage::TabAddOverflow);
+    assert_eq!(initial + 2, state.tabs.tabs.len());
+    assert_eq!(Some("tab-extra-2".to_string()), state.tabs.active_id);
+    assert!(line2.contains("Added tab"), "{line2}");
+}
+
+#[test]
+fn tab_external_delete_closes_instantly_and_hands_off_mru() {
+    let mut state = CompositesState::new();
+    fired(
+        &mut state,
+        &CompositesMessage::TabSelected("tab-todo".into()),
+    );
+    assert_eq!(Some("tab-todo".to_string()), state.tabs.active_id);
+
+    let before = state.tabs.tabs.len();
+    let line = fired(&mut state, &CompositesMessage::TabExternalDelete);
+    assert_eq!(before - 1, state.tabs.tabs.len());
+    assert!(!state.tabs.tabs.iter().any(|t| t.id == "tab-todo"));
+    assert_ne!(Some("tab-todo".to_string()), state.tabs.active_id);
+    assert_eq!(None, state.pending_close);
+    assert!(line.contains("External deletion"), "{line}");
+}
+
+#[test]
+fn tab_reset_restores_default_tabs() {
+    let mut state = CompositesState::new();
+    // Mutate state: add overflow tab, trigger context menu, set pending close
+    fired(&mut state, &CompositesMessage::TabAddOverflow);
+    fired(
+        &mut state,
+        &CompositesMessage::TabContextMenu("tab-report".into()),
+    );
+    state.pending_close = Some("tab-notes".to_string());
+
+    assert_eq!(data::TABS.len() + 1, state.tabs.tabs.len());
+    assert!(state.tab_context_menu_target.is_some());
+    assert!(state.pending_close.is_some());
+
+    // Reset tabs
+    let line = fired(&mut state, &CompositesMessage::TabReset);
+    assert_eq!(data::TABS.len(), state.tabs.tabs.len());
+    assert_eq!(Some(data::TAB_SELECTED.to_string()), state.tabs.active_id);
+    assert_eq!(None, state.pending_close);
+    assert_eq!(None, state.tab_context_menu_target);
+    assert!(line.contains("reset"), "{line}");
+}
+
+#[test]
+fn tab_strip_renders_with_guard_and_context_menu() {
+    let mut state = CompositesState::new();
+    state.pending_close = Some("tab-notes".to_string());
+    state.tab_context_menu_target = Some("tab-report".to_string());
+    state.last_tab_action = Some("Action executed".to_string());
+
+    for viewport in [PANE, NARROW] {
+        laid_out(viewport, tab_strip_section(&state));
+    }
 }
 
 #[test]
@@ -1218,4 +1459,5 @@ fn default_state_matches_new() {
     assert_eq!(a.pagination.page, b.pagination.page);
     assert_eq!(a.pips.page, b.pips.page);
     assert_eq!(a.pending_close, b.pending_close);
+    assert_eq!(a.pending_close_queue, b.pending_close_queue);
 }
