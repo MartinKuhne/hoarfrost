@@ -146,6 +146,34 @@ pub const PLACEHOLDER_12H: &str = "--:-- --";
 /// Placeholder for a 12-hour time with seconds (§3.11).
 pub const PLACEHOLDER_12H_SEC: &str = "--:--:-- --";
 
+// ---------------------------------------------------------------------------
+// Tab strip context menu (§4.9.1, `UIF-TAB-001`)
+// ---------------------------------------------------------------------------
+
+/// Label for closing a tab (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_CLOSE: &str = "Close";
+
+/// Label for closing all tabs other than the selected tab (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_CLOSE_OTHERS: &str = "Close Others";
+
+/// Label for closing all open tabs (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_CLOSE_ALL: &str = "Close All";
+
+/// Label for editing the active tab document (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_EDIT: &str = "Edit";
+
+/// Label for opening the tab document in the system editor (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_OPEN_IN_EDITOR: &str = "Open in Editor";
+
+/// Label for formatting the tab document markdown (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_FORMAT_MARKDOWN: &str = "Format Markdown";
+
+/// Label for copying the tab document file path (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_COPY_PATH: &str = "Copy Path";
+
+/// Label for revealing the tab document in the system file explorer (§4.9.1, `UIF-TAB-001`).
+pub const LABEL_TAB_SHOW_IN_EXPLORER: &str = "Show in File Explorer";
+
 #[cfg(all(test, feature = "all"))]
 #[path = "strings_tests.rs"]
 mod strings_tests;

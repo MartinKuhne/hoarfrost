@@ -17,8 +17,14 @@ use crate::surface::menu::{Menu, Row};
 use crate::surface::tooltip::Tooltip;
 use crate::token::{color::Palette, shape, size, space, typography};
 
-/// Standard height of a tab strip in pixels (`size.control.md` - 32px).
-pub const TAB_STRIP_HEIGHT: f32 = size::CONTROL_MD;
+pub use crate::strings::{
+    LABEL_TAB_CLOSE, LABEL_TAB_CLOSE_ALL, LABEL_TAB_CLOSE_OTHERS, LABEL_TAB_COPY_PATH,
+    LABEL_TAB_EDIT, LABEL_TAB_FORMAT_MARKDOWN, LABEL_TAB_OPEN_IN_EDITOR,
+    LABEL_TAB_SHOW_IN_EXPLORER,
+};
+
+/// Standard height of a tab strip in pixels (`size.control.lg` - 36px, §4.4.1, `UIF-TAB-001`).
+pub const TAB_STRIP_HEIGHT: f32 = size::CONTROL_LG;
 
 /// Minimum width of an individual tab in pixels (96px, §2.2, §4.4.3).
 pub const TAB_MIN_WIDTH: f32 = 96.0;
@@ -67,20 +73,20 @@ pub fn tab_context_menu(tab_id: &str) -> Menu {
     let menu_id = format!("menu:tab:{tab_id}");
     let rows = vec![
         // Group 1: Tab Lifecycle
-        Row::action("close", "Close Tab"),
-        Row::action("close_others", "Close Other Tabs"),
-        Row::action("close_all", "Close All Tabs"),
+        Row::action("close", LABEL_TAB_CLOSE),
+        Row::action("close_others", LABEL_TAB_CLOSE_OTHERS),
+        Row::action("close_all", LABEL_TAB_CLOSE_ALL),
         // Divider
         Row::separator(),
         // Group 2: Edit & Automation
-        Row::action("edit", "Edit"),
-        Row::action("open_in_editor", "Open in System Editor"),
-        Row::action("format_markdown", "Format Markdown"),
+        Row::action("edit", LABEL_TAB_EDIT),
+        Row::action("open_in_editor", LABEL_TAB_OPEN_IN_EDITOR),
+        Row::action("format_markdown", LABEL_TAB_FORMAT_MARKDOWN),
         // Divider
         Row::separator(),
         // Group 3: Location
-        Row::action("copy_path", "Copy Relative Path"),
-        Row::action("show_in_explorer", "Show in File Explorer"),
+        Row::action("copy_path", LABEL_TAB_COPY_PATH),
+        Row::action("show_in_explorer", LABEL_TAB_SHOW_IN_EXPLORER),
     ];
 
     Menu::new(menu_id, rows)
@@ -100,6 +106,11 @@ pub enum TabCloseVerdict {
         tab_id: String,
         /// The title of the dirty tab.
         title: String,
+    },
+    /// The tab is pinned and cannot be closed (`UIF-TAB-003`).
+    RefusedPinned {
+        /// The ID of the pinned tab.
+        tab_id: String,
     },
 }
 
@@ -193,6 +204,8 @@ impl TabStripModel {
 
     /// Request closing a tab by `id` (`UIF-TAB-003`).
     ///
+    /// If the tab is pinned (`is_pinned == true`), returns [`TabCloseVerdict::RefusedPinned`]
+    /// because pinned tabs cannot be closed.
     /// If the tab is dirty (`is_dirty == true`), returns [`TabCloseVerdict::RequiresConfirmation`]
     /// so the host can display a save/discard modal.
     /// If the tab is clean, it is closed immediately, and focus hands off to the most recently
@@ -203,6 +216,12 @@ impl TabStripModel {
                 new_active_id: self.active_id.clone(),
             };
         };
+
+        if tab.is_pinned {
+            return TabCloseVerdict::RefusedPinned {
+                tab_id: tab.id.clone(),
+            };
+        }
 
         if tab.is_dirty {
             TabCloseVerdict::RequiresConfirmation {
@@ -269,6 +288,8 @@ pub struct TabItemStyle {
     pub text_color: Color,
     /// Dirty indicator color.
     pub dirty_color: Color,
+    /// Top accent indicator color (2px indicator bar, §4.4.1, `UIF-TAB-001`).
+    pub top_accent: Color,
 }
 
 /// Resolve the styling of a tab item (`UIF-TAB-003`).
@@ -279,31 +300,40 @@ pub fn resolve_tab_style(
     is_hovered: bool,
     is_dirty: bool,
 ) -> TabItemStyle {
-    let background = if is_active {
-        palette.surface_raised
+    let (background, border, text_color, top_accent) = if is_active {
+        (
+            palette.surface_overlay,
+            Border::default()
+                .color(palette.border_strong)
+                .width(shape::BORDER_HAIRLINE)
+                .rounded(shape::RADIUS_WIDGET),
+            palette.text_strong,
+            palette.accent_border,
+        )
     } else if is_hovered {
-        palette.surface_hover
+        (
+            palette.surface_hover,
+            Border::default()
+                .color(palette.border_strong)
+                .width(shape::BORDER_HAIRLINE)
+                .rounded(shape::RADIUS_WIDGET),
+            palette.text_primary,
+            palette.border_strong,
+        )
     } else {
-        Color::TRANSPARENT
-    };
-
-    let border = if is_active {
-        Border::default()
-            .color(palette.border_strong)
-            .width(1.0)
-            .rounded(shape::RADIUS_WIDGET)
-    } else {
-        Border::default()
-    };
-
-    let text_color = if is_active {
-        palette.text_strong
-    } else {
-        palette.text_primary
+        (
+            palette.surface_raised,
+            Border::default()
+                .color(palette.border_subtle)
+                .width(shape::BORDER_HAIRLINE)
+                .rounded(shape::RADIUS_WIDGET),
+            palette.text_muted,
+            Color::TRANSPARENT,
+        )
     };
 
     let dirty_color = if is_dirty {
-        palette.accent_fill
+        palette.status_warning
     } else {
         Color::TRANSPARENT
     };
@@ -313,6 +343,7 @@ pub fn resolve_tab_style(
         border,
         text_color,
         dirty_color,
+        top_accent,
     }
 }
 
@@ -360,6 +391,9 @@ impl<'a, Message> TabStrip<'a, Message> {
     }
 
     /// Callback invoked when a tab's context menu is requested (`UIF-TAB-001`).
+    ///
+    /// Note: [`iced::Point::ORIGIN`] is passed as the cursor position because
+    /// `iced::widget::mouse_area::on_right_press` does not yield cursor coordinates.
     #[must_use]
     pub fn on_context_menu(mut self, f: impl Fn(String, iced::Point) -> Message + 'a) -> Self {
         self.on_context_menu = Some(Box::new(f));
@@ -372,34 +406,54 @@ impl<'a, Message: 'a + Clone> From<TabStrip<'a, Message>> for Element<'a, Messag
         let palette = tab_strip.palette;
         let mut row = iced::widget::Row::new()
             .spacing(space::XXS)
-            .align_y(alignment::Vertical::Center);
+            .height(Length::Fill);
 
         for tab in &tab_strip.model.tabs {
             let is_active = tab_strip.model.active_id.as_deref() == Some(&tab.id);
             let style = resolve_tab_style(&palette, is_active, false, tab.is_dirty);
 
+            let top_accent_bar = iced::widget::container(iced::widget::Space::new())
+                .height(Length::Fixed(shape::BORDER_FOCUS))
+                .width(Length::Fill)
+                .style(move |_theme| iced::widget::container::Style {
+                    background: Some(style.top_accent.into()),
+                    ..Default::default()
+                });
+
             let mut tab_content = iced::widget::Row::new()
                 .spacing(space::XS)
-                .align_y(alignment::Vertical::Center);
+                .padding(iced::Padding::new(0.0).horizontal(space::SM))
+                .align_y(alignment::Vertical::Center)
+                .height(Length::Fill);
 
             if tab.is_dirty {
-                tab_content = tab_content.push(
-                    iced::widget::container(
-                        iced::widget::text("•")
-                            .size(Pixels(typography::CAPTION.size))
-                            .color(style.dirty_color),
-                    )
-                    .width(Length::Fixed(DIRTY_DOT_DIAMETER)),
-                );
+                let dirty_dot = iced::widget::container(
+                    iced::widget::Space::new()
+                        .width(DIRTY_DOT_DIAMETER)
+                        .height(DIRTY_DOT_DIAMETER),
+                )
+                .width(Length::Fixed(DIRTY_DOT_DIAMETER))
+                .height(Length::Fixed(DIRTY_DOT_DIAMETER))
+                .style(move |_theme| iced::widget::container::Style {
+                    background: Some(style.dirty_color.into()),
+                    border: Border::default().rounded(shape::RADIUS_PILL),
+                    shadow: Shadow::default(),
+                    snap: true,
+                    text_color: None,
+                });
+                tab_content = tab_content.push(dirty_dot);
             }
 
             tab_content = tab_content.push(
                 iced::widget::text(tab.title.clone())
-                    .size(Pixels(typography::BODY.size))
+                    .size(Pixels(typography::UI_COMPACT.size))
+                    .line_height(typography::UI_COMPACT.iced_line_height())
                     .color(style.text_color),
             );
 
-            if let Some(on_close) = &tab_strip.on_close_tab {
+            if !tab.is_pinned
+                && let Some(on_close) = &tab_strip.on_close_tab
+            {
                 let close_msg = on_close(tab.id.clone());
                 tab_content = tab_content.push(
                     iced::widget::button(
@@ -442,20 +496,24 @@ impl<'a, Message: 'a + Clone> From<TabStrip<'a, Message>> for Element<'a, Messag
             }
 
             let tab_id = tab.id.clone();
-            // Width clamping: guarantee at least TAB_MIN_WIDTH (96px) and at most TAB_MAX_WIDTH (220px)
-            let tab_inner = iced::widget::container(iced::widget::stack![
-                iced::widget::Space::new().width(Length::Fixed(TAB_MIN_WIDTH)),
+            let tab_column = iced::widget::column![
+                top_accent_bar,
                 tab_content,
-            ])
-            .padding(iced::Padding::new(space::XS).horizontal(space::SM))
-            .max_width(Pixels(TAB_MAX_WIDTH))
-            .style(move |_theme| iced::widget::container::Style {
-                background: Some(style.background.into()),
-                border: style.border,
-                shadow: Shadow::default(),
-                snap: true,
-                text_color: Some(style.text_color),
-            });
+                iced::widget::Space::new().width(Length::Fixed(TAB_MIN_WIDTH)),
+            ]
+            .height(Length::Fill);
+
+            // Width clamping: guarantee at least TAB_MIN_WIDTH (96px) and at most TAB_MAX_WIDTH (220px)
+            let tab_inner = iced::widget::container(tab_column)
+                .height(Length::Fill)
+                .max_width(Pixels(TAB_MAX_WIDTH))
+                .style(move |_theme| iced::widget::container::Style {
+                    background: Some(style.background.into()),
+                    border: style.border,
+                    shadow: Shadow::default(),
+                    snap: true,
+                    text_color: Some(style.text_color),
+                });
 
             let mut tab_area = iced::widget::mouse_area(tab_inner);
 
@@ -463,7 +521,9 @@ impl<'a, Message: 'a + Clone> From<TabStrip<'a, Message>> for Element<'a, Messag
                 tab_area = tab_area.on_press(on_select(tab_id.clone()));
             }
 
-            if let Some(on_close) = &tab_strip.on_close_tab {
+            if !tab.is_pinned
+                && let Some(on_close) = &tab_strip.on_close_tab
+            {
                 tab_area = tab_area.on_middle_press(on_close(tab_id.clone()));
             }
 
@@ -480,19 +540,21 @@ impl<'a, Message: 'a + Clone> From<TabStrip<'a, Message>> for Element<'a, Messag
             }
         }
 
-        let scroll = iced::widget::scrollable(row).direction(
-            iced::widget::scrollable::Direction::Horizontal(
+        let scroll = iced::widget::scrollable(row)
+            .direction(iced::widget::scrollable::Direction::Horizontal(
                 iced::widget::scrollable::Scrollbar::default(),
-            ),
-        );
+            ))
+            .height(Length::Fill);
 
         iced::widget::container(scroll)
             .width(Length::Fill)
             .height(Length::Fixed(TAB_STRIP_HEIGHT))
             .padding(iced::Padding::new(0.0).horizontal(space::XS))
             .style(move |_theme| iced::widget::container::Style {
-                background: Some(palette.surface_base.into()),
-                border: Border::default().color(palette.border_subtle).width(1.0),
+                background: Some(palette.surface_sunken.into()),
+                border: Border::default()
+                    .color(palette.border_subtle)
+                    .width(shape::BORDER_HAIRLINE),
                 text_color: Some(palette.text_primary),
                 shadow: Shadow::default(),
                 snap: true,

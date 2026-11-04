@@ -29,7 +29,7 @@
 use std::collections::BTreeSet;
 
 use iced::widget::Column;
-use iced::{Element, Length};
+use iced::{Border, Color, Element, Length, Shadow};
 
 use hoarfrost::composite::code_block::{CodeBlock, CodeBlockModel};
 use hoarfrost::composite::command_palette::{CommandPalette, CommandPaletteModel};
@@ -48,11 +48,13 @@ use hoarfrost::composite::stepper::{
     StepItem, StepStatus, Stepper, StepperModel, StepperOrientation, WizardFooterConfig,
     wizard_footer,
 };
-use hoarfrost::composite::tab_strip::{TabCloseVerdict, TabStrip, TabStripModel};
+use hoarfrost::composite::tab_strip::{
+    TabCloseVerdict, TabItem, TabStrip, TabStripModel, tab_context_menu,
+};
 use hoarfrost::surface::menu::model::Menu;
 use hoarfrost::surface::menu::view::MenuRow;
 use hoarfrost::token::color::Palette;
-use hoarfrost::token::{space, typography};
+use hoarfrost::token::{shape, space, typography};
 
 use crate::app::Message;
 use crate::data;
@@ -95,6 +97,27 @@ pub const RAIL_HOST_HEIGHT: f32 = 280.0;
 /// is visible and the card is not clipped.
 pub const PALETTE_HOST_HEIGHT: f32 = 420.0;
 
+/// Title of the dirty tab close confirmation guard card (`UIF-TAB-003`, `UIF-MOD-002`).
+pub const GUARD_TITLE: &str = "Unsaved Changes Guard (UIF-TAB-003)";
+
+/// Button label to cancel dirty tab closure (`UIF-TAB-003`).
+pub const LABEL_CANCEL: &str = "Cancel";
+
+/// Button label to discard unsaved edits and close a dirty tab (`UIF-TAB-003`).
+pub const LABEL_DISCARD_CLOSE: &str = "Discard & Close";
+
+/// Button label to dismiss an open context menu card (`UIF-TAB-001`).
+pub const LABEL_DISMISS: &str = "Dismiss";
+
+/// Button label to append dynamic tabs demonstrating horizontal overflow (`UIF-TAB-002`).
+pub const LABEL_ADD_OVERFLOW: &str = "+ Add Tab (Overflow)";
+
+/// Button label to simulate external file deletion synchronization (`UIF-TAB-003`).
+pub const LABEL_EXTERNAL_DELETE: &str = "Simulate External Delete";
+
+/// Button label to reset tabs to default fixtures (`UIF-TAB-001`, `UIF-TAB-003`).
+pub const LABEL_RESET_TABS: &str = "Reset Tabs";
+
 /// Interactive state for every live composite in the right pane.
 ///
 /// Owned by `DemoApp` because the hoarfrost composites borrow their models,
@@ -102,10 +125,18 @@ pub const PALETTE_HOST_HEIGHT: f32 = 420.0;
 /// [`crate::pane_atoms::AtomsState`].
 #[derive(Debug, Clone)]
 pub struct CompositesState {
-    /// Open document tabs, including the MRU activation history.
+    /// Open document tabs, including the MRU activation history (`UIF-TAB-001`, `UIF-TAB-003`).
     pub tabs: TabStripModel,
-    /// The tab whose close is waiting on a confirming click.
+    /// The tab whose close is waiting on a confirming click (`UIF-TAB-003`, `UIF-MOD-002`).
     pub pending_close: Option<String>,
+    /// Queue of dirty tab IDs awaiting close confirmation when batch closing (`UIF-TAB-003`).
+    pub pending_close_queue: Vec<String>,
+    /// Target tab id whose right-click context menu is currently open (`UIF-TAB-001`, §4.9.1).
+    pub tab_context_menu_target: Option<String>,
+    /// Last action executed from the tab strip or its context menu (`UIF-TAB-001`).
+    pub last_tab_action: Option<String>,
+    /// Counter for dynamically generated overflow demonstration tabs (`UIF-TAB-002`).
+    pub extra_tab_count: usize,
     /// Rail destinations, which one is selected, and whether it is expanded.
     pub rail: NavigationRailModel<String>,
     /// Wizard steps and the current one.
@@ -139,10 +170,26 @@ pub struct CompositesState {
 /// Everything the right pane reports back to the application.
 #[derive(Debug, Clone)]
 pub enum CompositesMessage {
-    /// A tab was activated.
+    /// A tab was activated (`UIF-TAB-001`).
     TabSelected(String),
-    /// A tab's close affordation was used (may need confirmation first).
+    /// A tab's close affordance was used (may need confirmation first) (`UIF-TAB-003`).
     TabCloseRequested(String),
+    /// Right-click on a tab requested its context menu (`UIF-TAB-001`).
+    TabContextMenu(String),
+    /// An action from the tab context menu was executed (`UIF-TAB-001`).
+    TabMenuAction(String, String),
+    /// The open tab context menu was dismissed (`UIF-TAB-001`).
+    TabMenuDismissed,
+    /// Dynamically add a document tab to demonstrate horizontal overflow (`UIF-TAB-002`).
+    TabAddOverflow,
+    /// Synchronize external file deletion closing tab and transferring focus to MRU (`UIF-TAB-003`).
+    TabExternalDelete,
+    /// Reset tab strip back to fixture defaults (`UIF-TAB-001`, `UIF-TAB-003`).
+    TabReset,
+    /// Confirm discarding edits and closing the dirty tab (`UIF-TAB-003`, `UIF-MOD-002`).
+    TabConfirmDiscard,
+    /// Cancel discarding edits and dismiss close confirmation (`UIF-TAB-003`, `UIF-MOD-002`).
+    TabCancelDiscard,
     /// A rail destination was selected.
     RailSelected(String),
     /// The rail was collapsed or expanded.
@@ -204,6 +251,10 @@ impl CompositesState {
         Self {
             tabs: data::tab_strip_model(),
             pending_close: None,
+            pending_close_queue: Vec::new(),
+            tab_context_menu_target: None,
+            last_tab_action: None,
+            extra_tab_count: 0,
             rail: data::rail_model(),
             stepper: data::stepper_model(),
             pagination: data::pagination_model(),
@@ -235,6 +286,137 @@ impl CompositesState {
         match message {
             CompositesMessage::TabSelected(id) => self.tabs.select_tab(id),
             CompositesMessage::TabCloseRequested(id) => self.close_tab(id),
+            CompositesMessage::TabContextMenu(id) => {
+                self.tab_context_menu_target = Some(id.clone());
+                self.last_tab_action = Some(format!("Context menu opened for '{id}'"));
+            }
+            CompositesMessage::TabMenuAction(action, id) => {
+                match action.as_str() {
+                    "close" => {
+                        self.close_tab(id);
+                    }
+                    "close_others" => {
+                        let other_ids: Vec<String> = self
+                            .tabs
+                            .tabs
+                            .iter()
+                            .filter(|t| &t.id != id && !t.is_pinned)
+                            .map(|t| t.id.clone())
+                            .collect();
+                        for other_id in other_ids {
+                            let is_dirty = self
+                                .tabs
+                                .tabs
+                                .iter()
+                                .find(|t| t.id == other_id)
+                                .is_some_and(|t| t.is_dirty);
+                            if is_dirty {
+                                if self.pending_close.is_none() {
+                                    self.pending_close = Some(other_id);
+                                } else {
+                                    self.pending_close_queue.push(other_id);
+                                }
+                            } else {
+                                self.tabs.confirm_close(&other_id);
+                            }
+                        }
+                        if self.tabs.tabs.iter().any(|t| &t.id == id) {
+                            self.tabs.select_tab(id);
+                        }
+                        self.last_tab_action = Some(format!("Closed other tabs, keeping '{id}'"));
+                    }
+                    "close_all" => {
+                        let cand_ids: Vec<String> = self
+                            .tabs
+                            .tabs
+                            .iter()
+                            .filter(|t| !t.is_pinned)
+                            .map(|t| t.id.clone())
+                            .collect();
+                        for cand_id in cand_ids {
+                            let is_dirty = self
+                                .tabs
+                                .tabs
+                                .iter()
+                                .find(|t| t.id == cand_id)
+                                .is_some_and(|t| t.is_dirty);
+                            if is_dirty {
+                                if self.pending_close.is_none() {
+                                    self.pending_close = Some(cand_id);
+                                } else {
+                                    self.pending_close_queue.push(cand_id);
+                                }
+                            } else {
+                                self.tabs.confirm_close(&cand_id);
+                            }
+                        }
+                        self.last_tab_action = Some("Close all tabs requested".to_string());
+                    }
+                    _ => {
+                        self.last_tab_action = Some(format!("Action '{action}' on {id}"));
+                    }
+                }
+                self.tab_context_menu_target = None;
+            }
+            CompositesMessage::TabMenuDismissed => {
+                self.tab_context_menu_target = None;
+                self.last_tab_action = Some("Context menu dismissed".to_string());
+            }
+            CompositesMessage::TabAddOverflow => {
+                self.extra_tab_count += 1;
+                let new_id = format!("tab-extra-{}", self.extra_tab_count);
+                let new_title = format!("extra-{}.rs", self.extra_tab_count);
+                let new_tab = TabItem::new(&new_id, &new_title)
+                    .with_tooltip(format!("Dynamic tab: {new_title}"))
+                    .with_dirty(false);
+                self.tabs.open_tab(new_tab);
+                self.last_tab_action = Some(format!("Added overflow tab '{new_title}'"));
+            }
+            CompositesMessage::TabExternalDelete => {
+                let target = if self.tabs.tabs.iter().any(|t| t.id == "tab-todo") {
+                    "tab-todo".to_string()
+                } else if let Some(active) = &self.tabs.active_id {
+                    active.clone()
+                } else if let Some(first) = self.tabs.tabs.first() {
+                    first.id.clone()
+                } else {
+                    "tab-todo".to_string()
+                };
+                if self.pending_close.as_deref() == Some(&target) {
+                    self.pending_close = if self.pending_close_queue.is_empty() {
+                        None
+                    } else {
+                        Some(self.pending_close_queue.remove(0))
+                    };
+                }
+                self.pending_close_queue.retain(|id| id != &target);
+                self.tabs.external_deletion_sync(&target);
+                self.last_tab_action = Some(format!("External deletion sync for '{target}'"));
+            }
+            CompositesMessage::TabReset => {
+                self.tabs = data::tab_strip_model();
+                self.pending_close = None;
+                self.pending_close_queue.clear();
+                self.tab_context_menu_target = None;
+                self.last_tab_action = Some("Tabs reset to default fixtures".to_string());
+            }
+            CompositesMessage::TabConfirmDiscard => {
+                if let Some(id) = self.pending_close.take() {
+                    self.tabs.confirm_close(&id);
+                    self.last_tab_action = Some(format!("Discarded edits and closed '{id}'"));
+                }
+                if !self.pending_close_queue.is_empty() {
+                    self.pending_close = Some(self.pending_close_queue.remove(0));
+                }
+            }
+            CompositesMessage::TabCancelDiscard => {
+                if let Some(id) = self.pending_close.take() {
+                    self.last_tab_action = Some(format!("Cancelled close for '{id}'"));
+                }
+                if !self.pending_close_queue.is_empty() {
+                    self.pending_close = Some(self.pending_close_queue.remove(0));
+                }
+            }
             CompositesMessage::RailSelected(id) => self.rail.selected = id.clone(),
             CompositesMessage::RailExpanded(expanded) => self.rail.expanded = *expanded,
             CompositesMessage::StepSelected(index) => self.select_step(*index),
@@ -300,6 +482,24 @@ impl CompositesState {
         match message {
             CompositesMessage::TabSelected(id) => describe_tab_selected(&self.tabs, id),
             CompositesMessage::TabCloseRequested(id) => self.describe_close(id),
+            CompositesMessage::TabContextMenu(id) => {
+                format!("Tab context menu requested: {id}")
+            }
+            CompositesMessage::TabMenuAction(action, id) => {
+                format!("Tab menu action '{action}' executed on {id}")
+            }
+            CompositesMessage::TabMenuDismissed => "Tab context menu dismissed".to_string(),
+            CompositesMessage::TabAddOverflow => format!(
+                "Added tab (overflow demonstration, {} tabs total)",
+                self.tabs.tabs.len()
+            ),
+            CompositesMessage::TabExternalDelete => format!(
+                "External deletion sync triggered (active: {:?})",
+                self.tabs.active_id
+            ),
+            CompositesMessage::TabReset => "Tab strip reset to default".to_string(),
+            CompositesMessage::TabConfirmDiscard => "Discarded edits and closed tab".to_string(),
+            CompositesMessage::TabCancelDiscard => "Cancelled close of dirty tab".to_string(),
             CompositesMessage::RailSelected(id) => describe_rail_selected(&self.rail, id),
             CompositesMessage::RailExpanded(expanded) => {
                 let mode = if *expanded { "expanded" } else { "collapsed" };
@@ -383,6 +583,16 @@ impl CompositesState {
 
     /// Describe the outcome of a close request from wherever the handshake got to.
     fn describe_close(&self, id: &str) -> String {
+        let is_pinned = self
+            .tabs
+            .tabs
+            .iter()
+            .find(|tab| tab.id == id)
+            .is_some_and(|tab| tab.is_pinned);
+        if is_pinned {
+            return format!("Cannot close pinned tab '{id}'");
+        }
+
         let title = self
             .tabs
             .tabs
@@ -405,16 +615,23 @@ impl CompositesState {
     /// while a confirmation is pending is the user confirming.
     fn close_tab(&mut self, id: &str) {
         if self.pending_close.as_deref() == Some(id) {
-            self.pending_close = None;
             self.tabs.confirm_close(id);
+            self.pending_close = if self.pending_close_queue.is_empty() {
+                None
+            } else {
+                Some(self.pending_close_queue.remove(0))
+            };
             return;
         }
 
-        if matches!(
-            self.tabs.request_close(id),
-            TabCloseVerdict::RequiresConfirmation { .. }
-        ) {
-            self.pending_close = Some(id.to_string());
+        match self.tabs.request_close(id) {
+            TabCloseVerdict::RequiresConfirmation { .. } => {
+                self.pending_close = Some(id.to_string());
+            }
+            TabCloseVerdict::RefusedPinned { .. } => {
+                self.last_tab_action = Some(format!("Tab '{id}' is pinned and cannot be closed"));
+            }
+            TabCloseVerdict::CloseImmediately { .. } => {}
         }
     }
 
@@ -579,27 +796,397 @@ fn note<'a>(text: impl Into<String>) -> Element<'a, Message> {
 }
 
 // ---------------------------------------------------------------------------
-// Tab strip (UIF-TAB-003)
+// Tab strip (UIF-TAB-001, UIF-TAB-002, UIF-TAB-003)
 // ---------------------------------------------------------------------------
 
-/// Four tabs: two pinned, one active, one carrying unsaved changes.
-#[must_use]
-pub fn tab_strip_section(state: &CompositesState) -> Section<'_> {
-    let strip = TabStrip::new(&state.tabs)
-        .with_palette(Palette::dark())
-        .on_select_tab(|id| Message::Composites(CompositesMessage::TabSelected(id)))
-        .on_close_tab(|id| Message::Composites(CompositesMessage::TabCloseRequested(id)));
+/// A compact styled button adhering to token colors for normal and danger variants.
+fn action_button<'a>(
+    label: &'static str,
+    message: Message,
+    palette: Palette,
+    is_danger: bool,
+) -> Element<'a, Message> {
+    iced::widget::button(crate::section::rung(
+        label,
+        typography::CAPTION,
+        if is_danger {
+            palette.status_danger_text
+        } else {
+            palette.text_primary
+        },
+    ))
+    .on_press(message)
+    .padding(
+        iced::Padding::new(0.0)
+            .horizontal(space::SM)
+            .vertical(space::XXS),
+    )
+    .style(move |_theme, status| {
+        let is_hovered = matches!(status, iced::widget::button::Status::Hovered);
+        let is_pressed = matches!(status, iced::widget::button::Status::Pressed);
+        let (bg, text_color, border_color) = if is_danger {
+            if is_pressed {
+                (
+                    palette.status_danger_fill_active,
+                    palette.text_strong,
+                    palette.status_danger_fill_active,
+                )
+            } else if is_hovered {
+                (
+                    palette.status_danger_fill,
+                    palette.text_strong,
+                    palette.text_strong,
+                )
+            } else {
+                (
+                    palette.surface_raised,
+                    palette.status_danger_text,
+                    palette.status_danger_text,
+                )
+            }
+        } else if is_pressed {
+            (
+                palette.surface_active,
+                palette.text_strong,
+                palette.accent_border,
+            )
+        } else if is_hovered {
+            (
+                palette.surface_hover,
+                palette.text_strong,
+                palette.border_strong,
+            )
+        } else {
+            (
+                palette.surface_raised,
+                palette.text_primary,
+                palette.border_subtle,
+            )
+        };
 
-    let pending = match &state.pending_close {
-        Some(id) => format!("Close of '{id}' awaits a second click to confirm."),
-        None => "Nothing awaiting close confirmation.".to_string(),
+        iced::widget::button::Style {
+            background: Some(bg.into()),
+            text_color,
+            border: Border::default()
+                .color(border_color)
+                .width(shape::BORDER_HAIRLINE)
+                .rounded(shape::RADIUS_WIDGET),
+            shadow: Shadow::default(),
+            snap: true,
+        }
+    })
+    .into()
+}
+
+/// Active tab content viewport displaying document details and status indicators (`UIF-PRIN-006`).
+fn active_tab_viewport<'a>(state: &CompositesState, palette: Palette) -> Element<'a, Message> {
+    let content: Element<'a, Message> = if let Some(active_id) = &state.tabs.active_id {
+        if let Some(tab) = state.tabs.tabs.iter().find(|t| &t.id == active_id) {
+            let status_badge = if tab.is_dirty {
+                crate::section::rung(
+                    "[Dirty: Unsaved Changes]",
+                    typography::CAPTION,
+                    palette.status_warning,
+                )
+            } else if tab.is_pinned {
+                crate::section::rung("[Pinned]", typography::CAPTION, palette.accent_text)
+            } else {
+                crate::section::rung("[Clean]", typography::CAPTION, palette.text_muted)
+            };
+
+            let header = iced::widget::Row::new()
+                .spacing(space::SM)
+                .align_y(iced::Alignment::Center)
+                .push(crate::section::rung(
+                    format!("{} ({})", tab.title, tab.id),
+                    typography::BODY,
+                    palette.text_strong,
+                ))
+                .push(status_badge);
+
+            let excerpt = match tab.id.as_str() {
+                "tab-report" => {
+                    "Executive summary: All quarterly targets have been achieved with high system reliability."
+                }
+                "tab-notes" => {
+                    "Engineering sync: Unsaved architectural revisions for tab strip dynamic overflow handling."
+                }
+                "tab-todo" => {
+                    "Action items: Verify MRU activation handoff and external file deletion synchronization."
+                }
+                "tab-archive" => {
+                    "Historical log: Pinned archival documentation preserved against accidental closure."
+                }
+                _ => {
+                    "Dynamic buffer: Generated tab content demonstrating overflow scrolling and viewport bridging."
+                }
+            };
+
+            let body_preview =
+                crate::section::rung(excerpt, typography::CAPTION, palette.text_primary);
+
+            Column::new()
+                .spacing(space::XXS)
+                .push(header)
+                .push(body_preview)
+                .into()
+        } else {
+            crate::section::rung(
+                "Active document not found in open tabs.",
+                typography::CAPTION,
+                palette.text_muted,
+            )
+            .into()
+        }
+    } else {
+        crate::section::rung(
+            "No active tab selected.",
+            typography::CAPTION,
+            palette.text_muted,
+        )
+        .into()
     };
 
-    let body = Column::new()
+    iced::widget::container(content)
         .width(Length::Fill)
+        .padding(space::SM)
+        .style(move |_theme| iced::widget::container::Style {
+            background: Some(palette.surface_overlay.into()),
+            border: Border::default()
+                .color(palette.border_subtle)
+                .width(shape::BORDER_HAIRLINE)
+                .rounded(shape::RADIUS_WIDGET),
+            shadow: Shadow::default(),
+            snap: true,
+            text_color: Some(palette.text_primary),
+        })
+        .into()
+}
+
+/// Unsaved changes confirmation guard card (`UIF-TAB-003`, `UIF-MOD-002`).
+fn dirty_close_guard_card<'a>(id: &str, palette: Palette) -> Element<'a, Message> {
+    let warning_title =
+        crate::section::rung(GUARD_TITLE, typography::TITLE_SM, palette.status_warning);
+
+    let body = crate::section::rung(
+        format!("Document '{id}' has unsaved changes. Discard edits and close?"),
+        typography::BODY,
+        palette.text_primary,
+    );
+
+    let cancel_btn = action_button(
+        LABEL_CANCEL,
+        Message::Composites(CompositesMessage::TabCancelDiscard),
+        palette,
+        false,
+    );
+
+    let discard_btn = action_button(
+        LABEL_DISCARD_CLOSE,
+        Message::Composites(CompositesMessage::TabConfirmDiscard),
+        palette,
+        true,
+    );
+
+    let actions = iced::widget::Row::new()
+        .spacing(space::SM)
+        .push(cancel_btn)
+        .push(discard_btn);
+
+    let card_content = Column::new()
         .spacing(space::XS)
+        .push(warning_title)
+        .push(body)
+        .push(actions);
+
+    iced::widget::container(card_content)
+        .width(Length::Fill)
+        .padding(space::SM)
+        .style(move |_theme| iced::widget::container::Style {
+            background: Some(palette.surface_raised.into()),
+            border: Border::default()
+                .color(palette.border_strong)
+                .width(shape::BORDER_HAIRLINE)
+                .rounded(shape::RADIUS_CARD),
+            shadow: Shadow::default(),
+            snap: true,
+            text_color: Some(palette.text_primary),
+        })
+        .into()
+}
+
+/// Tab context menu card displaying standardized tab actions (`UIF-TAB-001`, §4.9.1).
+fn tab_context_menu_card<'a>(target_id: &str, palette: Palette) -> Element<'a, Message> {
+    let header_title = crate::section::rung(
+        format!("Context Menu: {target_id}"),
+        typography::TITLE_SM,
+        palette.text_strong,
+    );
+
+    let dismiss_btn = action_button(
+        LABEL_DISMISS,
+        Message::Composites(CompositesMessage::TabMenuDismissed),
+        palette,
+        false,
+    );
+
+    let header_row = iced::widget::Row::new()
+        .spacing(space::SM)
+        .align_y(iced::Alignment::Center)
+        .push(header_title)
+        .push(iced::widget::Space::new().width(Length::Fill))
+        .push(dismiss_btn);
+
+    let menu = tab_context_menu(target_id);
+    let mut menu_column = Column::new().spacing(space::XXS);
+
+    for row in menu.rows() {
+        let key = row.key().to_string();
+        if row.is_separator() {
+            let sep = iced::widget::container(iced::widget::Space::new())
+                .height(Length::Fixed(shape::BORDER_HAIRLINE))
+                .width(Length::Fill)
+                .style(move |_theme| iced::widget::container::Style {
+                    background: Some(palette.border_subtle.into()),
+                    ..Default::default()
+                });
+            menu_column = menu_column.push(sep);
+        } else {
+            let action_key = key.clone();
+            let tid = target_id.to_string();
+            let label = row.label().to_string();
+            let is_destructive = row.is_destructive();
+
+            let btn = iced::widget::button(crate::section::rung(
+                label,
+                typography::BODY,
+                if is_destructive {
+                    palette.status_danger_text
+                } else {
+                    palette.text_primary
+                },
+            ))
+            .on_press(Message::Composites(CompositesMessage::TabMenuAction(
+                action_key, tid,
+            )))
+            .width(Length::Fill)
+            .padding(
+                iced::Padding::new(0.0)
+                    .horizontal(space::SM)
+                    .vertical(space::XXS),
+            )
+            .style(move |_theme, status| {
+                let is_hovered = matches!(status, iced::widget::button::Status::Hovered);
+                let (bg, text_color) = if is_destructive {
+                    if is_hovered {
+                        (palette.status_danger_fill, palette.text_strong)
+                    } else {
+                        (Color::TRANSPARENT, palette.status_danger_text)
+                    }
+                } else if is_hovered {
+                    (palette.surface_hover, palette.text_strong)
+                } else {
+                    (Color::TRANSPARENT, palette.text_primary)
+                };
+
+                iced::widget::button::Style {
+                    background: Some(bg.into()),
+                    text_color,
+                    border: Border::default().rounded(shape::RADIUS_WIDGET),
+                    shadow: Shadow::default(),
+                    snap: true,
+                }
+            });
+            menu_column = menu_column.push(btn);
+        }
+    }
+
+    let card_content = Column::new()
+        .spacing(space::XS)
+        .push(header_row)
+        .push(menu_column);
+
+    iced::widget::container(card_content)
+        .width(Length::Fill)
+        .padding(space::SM)
+        .style(move |_theme| iced::widget::container::Style {
+            background: Some(palette.surface_raised.into()),
+            border: Border::default()
+                .color(palette.border_strong)
+                .width(shape::BORDER_HAIRLINE)
+                .rounded(shape::RADIUS_CARD),
+            shadow: Shadow::default(),
+            snap: true,
+            text_color: Some(palette.text_primary),
+        })
+        .into()
+}
+
+/// Scenario action toolbar for tab overflow, deletion and reset demonstrations (`UIF-TAB-002`, `UIF-TAB-003`).
+fn scenario_toolbar<'a>(palette: Palette) -> Element<'a, Message> {
+    let add_btn = action_button(
+        LABEL_ADD_OVERFLOW,
+        Message::Composites(CompositesMessage::TabAddOverflow),
+        palette,
+        false,
+    );
+    let del_btn = action_button(
+        LABEL_EXTERNAL_DELETE,
+        Message::Composites(CompositesMessage::TabExternalDelete),
+        palette,
+        false,
+    );
+    let reset_btn = action_button(
+        LABEL_RESET_TABS,
+        Message::Composites(CompositesMessage::TabReset),
+        palette,
+        false,
+    );
+
+    iced::widget::Row::new()
+        .spacing(space::XS)
+        .align_y(iced::Alignment::Center)
+        .push(add_btn)
+        .push(del_btn)
+        .push(reset_btn)
+        .into()
+}
+
+/// Four tabs: two pinned, one active, one carrying unsaved changes (`UIF-TAB-001`, `UIF-TAB-002`, `UIF-TAB-003`).
+#[must_use]
+pub fn tab_strip_section(state: &CompositesState) -> Section<'_> {
+    let palette = Palette::dark();
+    let strip = TabStrip::new(&state.tabs)
+        .with_palette(palette)
+        .on_select_tab(|id| Message::Composites(CompositesMessage::TabSelected(id)))
+        .on_close_tab(|id| Message::Composites(CompositesMessage::TabCloseRequested(id)))
+        .on_context_menu(|id, _| Message::Composites(CompositesMessage::TabContextMenu(id)));
+
+    let mut body = Column::new()
+        .width(Length::Fill)
+        .spacing(space::SM)
         .push(strip)
-        .push(note(pending));
+        .push(active_tab_viewport(state, palette));
+
+    if let Some(ref pending_id) = state.pending_close {
+        body = body.push(dirty_close_guard_card(pending_id, palette));
+    }
+
+    if let Some(ref target_id) = state.tab_context_menu_target {
+        body = body.push(tab_context_menu_card(target_id, palette));
+    }
+
+    body = body.push(scenario_toolbar(palette));
+
+    let info_text = if let Some(last_action) = &state.last_tab_action {
+        format!("{last_action} · {} tabs open", state.tabs.tabs.len())
+    } else {
+        format!(
+            "{} tabs open · right-click for context menu · middle-click or '×' to close",
+            state.tabs.tabs.len()
+        )
+    };
+    body = body.push(note(info_text));
 
     crate::section::section("Tab strip (UIF-TAB-003)", 1, body)
 }
